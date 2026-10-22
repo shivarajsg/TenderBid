@@ -211,7 +211,7 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span
                 className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${
                   user.role === 'ADMIN'
@@ -226,6 +226,15 @@ export const Navbar: React.FC = () => {
                 )}
                 {user.role}
               </span>
+
+              <div className="hidden md:flex flex-col text-right">
+                <span className="text-xs font-bold text-slate-900 leading-tight">
+                  {user.full_name || 'kumar shivaraj'}
+                </span>
+                <span className="text-[11px] text-slate-500 leading-tight">
+                  {user.email || 'kshivaraj784@gmail.com'}
+                </span>
+              </div>
             </div>
 
             <Button

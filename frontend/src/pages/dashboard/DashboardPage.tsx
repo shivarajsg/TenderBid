@@ -26,9 +26,6 @@ import {
   Cpu,
   Folder,
   Check,
-  X,
-  FileSpreadsheet,
-  Layers,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -106,289 +103,155 @@ export const DashboardPage: React.FC = () => {
     : 'Apex Electrical Systems Test Private Limited (MEDIUM • Electrical Engineering / Power Systems)';
 
   return (
-    <div className="space-y-6 w-full pb-12">
-      {/* 1. HERO CARD BANNER WITH ILLUSTRATION */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs relative overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+    <div className="space-y-3 sm:space-y-3.5 w-full">
+      {/* 1. HERO CARD BANNER WITH VECTOR ILLUSTRATION */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 px-5 py-4 shadow-2xs relative overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
           {/* Left Text & CTA */}
-          <div className="lg:col-span-6 space-y-4 z-10">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          <div className="lg:col-span-7 space-y-2 z-10">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Welcome back
             </h1>
 
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">
-              <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+              <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span className="truncate">{companyTitle}</span>
             </div>
 
-            <p className="text-sm text-slate-500 leading-relaxed max-w-xl">
+            <p className="text-xs text-slate-500 leading-relaxed max-w-xl">
               Discover relevant tenders, download official documents, check your eligibility with AI-assisted analysis, and manage your entire bidding journey in one place.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <Link to="/tenders">
-                <button className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center gap-2 shadow-xs transition-colors">
-                  <Search className="w-4 h-4" />
+                <button className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-2 shadow-xs transition-colors">
+                  <Search className="w-3.5 h-3.5" />
                   <span>Browse Tenders</span>
-                  <ArrowRight className="w-4 h-4 ml-0.5" />
+                  <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
                 </button>
               </Link>
 
               <button
                 type="button"
                 onClick={() => setGuideModalOpen(true)}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center gap-2 transition-colors bg-white shadow-xs"
+                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold text-xs flex items-center gap-2 transition-colors bg-white shadow-2xs"
               >
-                <Play className="w-4 h-4 text-slate-800 fill-slate-800" />
+                <Play className="w-3.5 h-3.5 text-slate-800 fill-slate-800" />
                 <span>Watch How It Works</span>
               </button>
             </div>
           </div>
 
-          {/* Right Vector Illustration (Laptop + Robot + Document Stack + AI Tags) */}
-          <div className="lg:col-span-6 flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-[500px] h-[260px] select-none">
-              {/* Floating Document Type Badges */}
-              <div className="absolute top-2 left-6 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold shadow-xs">
-                <FileText className="w-3.5 h-3.5 text-rose-600" />
-                <span>PDF</span>
-              </div>
-
-              <div className="absolute top-0 left-36 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold shadow-xs">
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                <span>XLSS</span>
-              </div>
-
-              <div className="absolute top-3 left-64 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold shadow-xs">
-                <FileText className="w-3.5 h-3.5 text-blue-600" />
-                <span>DOC</span>
-              </div>
-
-              {/* Dotted connecting lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 500 260">
-                <path
-                  d="M 60 30 Q 120 70 190 75"
-                  fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 3"
-                />
-                <path
-                  d="M 170 25 Q 200 65 240 85"
-                  fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 3"
-                />
-                <path
-                  d="M 290 30 Q 320 60 350 85"
-                  fill="none"
-                  stroke="#94a3b8"
-                  strokeWidth="1.5"
-                  strokeDasharray="3 3"
-                />
-              </svg>
-
-              {/* Laptop Screen Mockup */}
-              <div className="absolute left-0 bottom-2 w-[280px] h-[180px] bg-slate-900 rounded-xl p-2 shadow-xl border border-slate-700 flex flex-col z-10">
-                {/* Laptop Top Bar */}
-                <div className="h-4 bg-slate-800 rounded-t flex items-center px-2 gap-1 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-rose-500" />
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-[8px] text-slate-400 font-mono ml-2">Tender Analysis</span>
-                </div>
-                {/* Laptop Inner Screen */}
-                <div className="flex-1 bg-white rounded p-2 overflow-hidden flex flex-col justify-between text-[7px] text-slate-600">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-1">
-                    <span className="font-bold text-slate-900">Bid Evaluation</span>
-                    <span className="text-[6px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold">
-                      ACTIVE
-                    </span>
-                  </div>
-                  <div className="space-y-1 my-1">
-                    <div className="h-1.5 bg-slate-100 rounded w-full" />
-                    <div className="h-1.5 bg-slate-100 rounded w-4/5" />
-                    <div className="h-1.5 bg-slate-100 rounded w-2/3" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 pt-1 border-t border-slate-100 text-[6px]">
-                    <div className="bg-blue-50 p-1 rounded text-blue-700 font-bold">Turnover: OK</div>
-                    <div className="bg-purple-50 p-1 rounded text-purple-700 font-bold">EMD: Exempt</div>
-                    <div className="bg-emerald-50 p-1 rounded text-emerald-700 font-bold">Score: 92%</div>
-                  </div>
-                </div>
-                {/* Laptop Base */}
-                <div className="h-2 bg-slate-800 rounded-b mt-1 w-full mx-auto" />
-              </div>
-
-              {/* 3D Modern AI Robot */}
-              <div className="absolute right-32 bottom-8 z-20 flex flex-col items-center">
-                <div className="relative">
-                  {/* Robot Head */}
-                  <div className="w-16 h-14 bg-gradient-to-b from-blue-400 to-blue-600 rounded-2xl p-1 shadow-md border-2 border-white flex flex-col items-center justify-center relative">
-                    {/* Robot Antenna */}
-                    <div className="absolute -top-3 w-1.5 h-3 bg-blue-500 rounded-t" />
-                    <div className="absolute -top-4 w-3 h-3 rounded-full bg-cyan-300 shadow-sm animate-pulse" />
-                    {/* Robot Eyes Visor */}
-                    <div className="w-12 h-6 bg-slate-900 rounded-lg flex items-center justify-around px-1">
-                      <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-                      <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-                    </div>
-                  </div>
-                  {/* Robot Body */}
-                  <div className="w-14 h-12 bg-white rounded-xl mx-auto -mt-1 shadow-md border-2 border-slate-200 flex items-center justify-center relative">
-                    <div className="w-7 h-5 bg-blue-100 rounded border border-blue-300 flex items-center justify-center">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating AI Checklist Badges */}
-              <div className="absolute right-0 top-3 space-y-1.5 z-20">
-                {[
-                  'Extract key requirements',
-                  'Check compliance',
-                  'Find missing documents',
-                  'Suggest next steps',
-                ].map((text, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 border border-blue-200/90 text-blue-900 text-[10px] font-semibold shadow-2xs backdrop-blur-xs"
-                  >
-                    <div className="w-3.5 h-3.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] font-bold shrink-0">
-                      <Check className="w-2.5 h-2.5 stroke-[3]" />
-                    </div>
-                    <span>{text}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Stack of Binders & Tender Folder */}
-              <div className="absolute right-0 bottom-2 z-10 flex items-end gap-1.5">
-                {/* TENDER Folder */}
-                <div className="w-14 h-16 bg-white border-2 border-slate-300 rounded-lg shadow-sm flex flex-col justify-between p-1 -rotate-6">
-                  <div className="text-[7px] font-bold text-slate-800 uppercase tracking-tighter">
-                    TENDER
-                  </div>
-                  <div className="space-y-0.5">
-                    <div className="h-0.5 bg-slate-300 rounded w-full" />
-                    <div className="h-0.5 bg-slate-300 rounded w-3/4" />
-                  </div>
-                </div>
-
-                {/* Stack of blue binders */}
-                <div className="flex flex-col gap-0.5">
-                  <div className="w-28 h-4 bg-blue-600 text-white text-[7px] font-bold tracking-tight rounded flex items-center justify-center shadow-xs">
-                    SPECIFICATIONS
-                  </div>
-                  <div className="w-28 h-4 bg-blue-700 text-white text-[7px] font-bold tracking-tight rounded flex items-center justify-center shadow-xs">
-                    BOQ
-                  </div>
-                  <div className="w-28 h-4 bg-blue-800 text-white text-[7px] font-bold tracking-tight rounded flex items-center justify-center shadow-xs">
-                    ATC &amp; ANNEXURES
-                  </div>
-                  <div className="w-28 h-4 bg-blue-900 text-white text-[7px] font-bold tracking-tight rounded flex items-center justify-center shadow-xs">
-                    CORRIGENDA
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Right Vector Illustration (Laptop + Robot + Documents) */}
+          <div className="lg:col-span-5 flex justify-center lg:justify-end">
+            <img
+              src="/images/dashboard-hero-illustration.png"
+              alt="AI Tender Intelligence"
+              className="h-32 sm:h-36 md:h-40 w-auto object-contain select-none pointer-events-none drop-shadow-xs"
+            />
           </div>
         </div>
       </div>
 
       {/* 2. FOUR METRIC / KPI STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1: Active Opportunities */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <FileText className="w-6 h-6" />
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-slate-900 leading-tight">
+              <div className="text-xl font-bold text-slate-900 leading-tight">
                 {tenderCount}
               </div>
-              <div className="text-sm font-semibold text-slate-800 mt-0.5">
+              <div className="text-xs font-semibold text-slate-800 mt-0.5">
                 Active Opportunities
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-400">
                 Tenders in database
               </div>
             </div>
           </div>
-          <Search className="w-5 h-5 text-blue-300 shrink-0" />
+          <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+            <Search className="w-3.5 h-3.5" />
+          </div>
         </div>
 
         {/* Metric 2: Vault Documents */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-fuchsia-50 text-fuchsia-600 flex items-center justify-center shrink-0">
-              <Folder className="w-6 h-6" />
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-100 flex items-center justify-center shrink-0">
+              <Folder className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-slate-900 leading-tight">
+              <div className="text-xl font-bold text-slate-900 leading-tight">
                 {docCount}
               </div>
-              <div className="text-sm font-semibold text-slate-800 mt-0.5">
+              <div className="text-xs font-semibold text-slate-800 mt-0.5">
                 Vault Documents
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-400">
                 Indexed proof files
               </div>
             </div>
           </div>
-          <FolderLock className="w-5 h-5 text-fuchsia-300 shrink-0" />
+          <div className="w-7 h-7 rounded-full bg-fuchsia-50 text-fuchsia-500 flex items-center justify-center shrink-0">
+            <FolderLock className="w-3.5 h-3.5" />
+          </div>
         </div>
 
         {/* Metric 3: Compliance Reports */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <FileCheck2 className="w-6 h-6" />
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+              <FileCheck2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-slate-900 leading-tight">
+              <div className="text-xl font-bold text-slate-900 leading-tight">
                 {recentReports.length > 0 ? recentReports.length : 5}
               </div>
-              <div className="text-sm font-semibold text-slate-800 mt-0.5">
+              <div className="text-xs font-semibold text-slate-800 mt-0.5">
                 Compliance Reports
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-400">
                 Evaluations performed
               </div>
             </div>
           </div>
-          <FileText className="w-5 h-5 text-blue-300 shrink-0" />
+          <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+            <FileText className="w-3.5 h-3.5" />
+          </div>
         </div>
 
         {/* Metric 4: Eligible Tenders */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-slate-900 leading-tight">
+              <div className="text-xl font-bold text-slate-900 leading-tight">
                 {eligibleCount}
               </div>
-              <div className="text-sm font-semibold text-slate-800 mt-0.5">
+              <div className="text-xs font-semibold text-slate-800 mt-0.5">
                 Eligible Tenders
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-400">
                 Verified by rule engine
               </div>
             </div>
           </div>
-          <CheckCircle2 className="w-5 h-5 text-emerald-300 shrink-0" />
+          <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Check className="w-3.5 h-3.5" />
+          </div>
         </div>
       </div>
 
       {/* 3. "HOW TENDERBID AI HELPS YOU" WORKFLOW STEPPER */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900">
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 space-y-2.5">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h2 className="text-sm font-bold text-slate-900">
             How TenderBid AI Helps You
           </h2>
           <button
@@ -397,86 +260,104 @@ export const DashboardPage: React.FC = () => {
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
           >
             <span>View Detailed Guide</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3 h-3" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-center">
+        <div className="flex flex-col md:flex-row items-center gap-2">
           {/* Step 1 */}
-          <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2 relative h-full flex flex-col justify-between">
-            <div>
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mb-2">
+          <div className="flex-1 w-full p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1.5 min-h-[110px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                 1
+              </span>
+            </div>
+            <div className="flex flex-col items-center text-center px-1">
+              <div className="w-8 h-8 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center mb-1 shadow-2xs">
+                <Search className="w-4 h-4" />
               </div>
-              <div className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-800 flex items-center justify-center mb-2">
-                <Search className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">Find Tenders</h3>
-              <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              <h3 className="text-xs font-bold text-slate-900">Find Tenders</h3>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
                 Search and discover relevant tenders from GeM, CPPP and state portals.
               </p>
             </div>
           </div>
 
+          <span className="text-slate-300 font-bold hidden md:block text-xs shrink-0">→</span>
+
           {/* Step 2 */}
-          <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2 relative h-full flex flex-col justify-between">
-            <div>
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mb-2">
+          <div className="flex-1 w-full p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1.5 min-h-[110px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                 2
+              </span>
+            </div>
+            <div className="flex flex-col items-center text-center px-1">
+              <div className="w-8 h-8 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center mb-1 shadow-2xs">
+                <FileText className="w-4 h-4" />
               </div>
-              <div className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-800 flex items-center justify-center mb-2">
-                <FileText className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">Download Documents</h3>
-              <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              <h3 className="text-xs font-bold text-slate-900">Download Documents</h3>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
                 Fetch official tender documents with specifications, BOQ, ATC and corrigenda.
               </p>
             </div>
           </div>
 
+          <span className="text-slate-300 font-bold hidden md:block text-xs shrink-0">→</span>
+
           {/* Step 3 */}
-          <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2 relative h-full flex flex-col justify-between">
-            <div>
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mb-2">
+          <div className="flex-1 w-full p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1.5 min-h-[110px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                 3
+              </span>
+            </div>
+            <div className="flex flex-col items-center text-center px-1">
+              <div className="w-8 h-8 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center mb-1 shadow-2xs">
+                <ShieldCheck className="w-4 h-4" />
               </div>
-              <div className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-800 flex items-center justify-center mb-2">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">Run Compliance Analysis</h3>
-              <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              <h3 className="text-xs font-bold text-slate-900">Run Compliance Analysis</h3>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
                 AI-assisted analysis against your company profile and tender requirements.
               </p>
             </div>
           </div>
 
+          <span className="text-slate-300 font-bold hidden md:block text-xs shrink-0">→</span>
+
           {/* Step 4 */}
-          <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2 relative h-full flex flex-col justify-between">
-            <div>
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mb-2">
+          <div className="flex-1 w-full p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1.5 min-h-[110px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                 4
+              </span>
+            </div>
+            <div className="flex flex-col items-center text-center px-1">
+              <div className="w-8 h-8 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center mb-1 shadow-2xs">
+                <FileCheck2 className="w-4 h-4" />
               </div>
-              <div className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-800 flex items-center justify-center mb-2">
-                <FileCheck2 className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">Prepare Your Bid</h3>
-              <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              <h3 className="text-xs font-bold text-slate-900">Prepare Your Bid</h3>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
                 Organize documents, track requirements and get guidance on missing evidence.
               </p>
             </div>
           </div>
 
+          <span className="text-slate-300 font-bold hidden md:block text-xs shrink-0">→</span>
+
           {/* Step 5 */}
-          <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2 relative h-full flex flex-col justify-between">
-            <div>
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mb-2">
+          <div className="flex-1 w-full p-2.5 rounded-lg border border-slate-200/80 bg-slate-50/50 space-y-1.5 min-h-[110px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
                 5
+              </span>
+            </div>
+            <div className="flex flex-col items-center text-center px-1">
+              <div className="w-8 h-8 rounded-full border border-slate-200 bg-white text-slate-700 flex items-center justify-center mb-1 shadow-2xs">
+                <Send className="w-4 h-4" />
               </div>
-              <div className="w-10 h-10 rounded-full border border-slate-200 bg-white text-slate-800 flex items-center justify-center mb-2">
-                <Send className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">Submit &amp; Track</h3>
-              <p className="text-xs text-slate-500 leading-relaxed mt-1">
+              <h3 className="text-xs font-bold text-slate-900">Submit &amp; Track</h3>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
                 Submit through the official portal and track your bid status.
               </p>
             </div>
@@ -485,16 +366,16 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* 4. THREE-COLUMN BOTTOM SECTION (Reports | Key Features | Getting Started) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-stretch">
         {/* Column 1: Recent Compliance Reports (Span 6) */}
-        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 shadow-xs p-6 flex flex-col justify-between">
+        <div className="lg:col-span-6 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-900">
                   Recent Compliance Intelligence Reports
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-[11px] text-slate-400">
                   Strict deterministic evaluations with hybrid citations and AI explanations
                 </p>
               </div>
@@ -503,30 +384,30 @@ export const DashboardPage: React.FC = () => {
                 className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0 ml-2"
               >
                 <span>View all</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                    <th className="pb-2.5">REPORT ID / DATE</th>
-                    <th className="pb-2.5">OVERALL RESULT</th>
-                    <th className="pb-2.5">RULE SCORE</th>
-                    <th className="pb-2.5">ENGINE VERSION</th>
-                    <th className="pb-2.5 text-right">ACTIONS</th>
+                  <tr className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <th className="pb-1.5">REPORT ID / DATE</th>
+                    <th className="pb-1.5">OVERALL RESULT</th>
+                    <th className="pb-1.5">RULE SCORE</th>
+                    <th className="pb-1.5">ENGINE VERSION</th>
+                    <th className="pb-1.5 text-right">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {recentReports.length > 0 ? (
                     recentReports.slice(0, 4).map((report) => (
                       <tr key={report.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3">
-                          <p className="font-semibold text-slate-900 font-mono">
+                        <td className="py-2">
+                          <p className="font-semibold text-slate-900 font-mono text-xs">
                             {report.id.substring(0, 13)}...
                           </p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-[10px] text-slate-400 mt-0.5">
                             {new Date(report.created_at).toLocaleDateString([], {
                               day: '2-digit',
                               month: '2-digit',
@@ -539,9 +420,9 @@ export const DashboardPage: React.FC = () => {
                             })}
                           </p>
                         </td>
-                        <td className="py-3">
+                        <td className="py-2">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-2xs font-bold uppercase tracking-tight ${
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight ${
                               report.overall_status === 'ELIGIBLE'
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -551,17 +432,17 @@ export const DashboardPage: React.FC = () => {
                             {report.overall_status.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className="py-3 font-semibold text-slate-800">
+                        <td className="py-2 font-semibold text-slate-800 text-xs">
                           {report.overall_score !== null && report.overall_score !== undefined
                             ? `${Number(report.overall_score).toFixed(1)}%`
                             : '33.3%'}
                         </td>
-                        <td className="py-3 text-slate-400 font-mono">
+                        <td className="py-2 text-slate-400 font-mono text-[11px]">
                           {report.rule_engine_version || '1.0.0'}
                         </td>
-                        <td className="py-3 text-right">
+                        <td className="py-2 text-right">
                           <Link to={`/compliance/reports/${report.id}`}>
-                            <button className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                            <button className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs">
                               View Report
                             </button>
                           </Link>
@@ -577,21 +458,21 @@ export const DashboardPage: React.FC = () => {
                       { id: '359eec81-997d...', date: '22/10/2026 at 23:38', score: '33.3%', ver: '1.0.0' },
                     ].map((row, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3">
-                          <p className="font-semibold text-slate-900 font-mono">{row.id}</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">{row.date}</p>
+                        <td className="py-2">
+                          <p className="font-semibold text-slate-900 font-mono text-xs">{row.id}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{row.date}</p>
                         </td>
-                        <td className="py-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold uppercase tracking-tight bg-amber-50 text-amber-700 border border-amber-200">
+                        <td className="py-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight bg-amber-50 text-amber-700 border border-amber-200">
                             <AlertTriangle className="w-3 h-3" />
                             PARTIALLY ELIGIBLE
                           </span>
                         </td>
-                        <td className="py-3 font-semibold text-slate-800">{row.score}</td>
-                        <td className="py-3 text-slate-400 font-mono">{row.ver}</td>
-                        <td className="py-3 text-right">
+                        <td className="py-2 font-semibold text-slate-800 text-xs">{row.score}</td>
+                        <td className="py-2 text-slate-400 font-mono text-[11px]">{row.ver}</td>
+                        <td className="py-2 text-right">
                           <Link to="/compliance/reports">
-                            <button className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+                            <button className="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-2xs">
                               View Report
                             </button>
                           </Link>
@@ -606,93 +487,64 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Column 2: Key Features (Span 3) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+        <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 space-y-2.5">
+          <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
             Key Features
           </h3>
 
-          <div className="space-y-3.5">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <Search className="w-4 h-4" />
+          <div className="space-y-2">
+            {[
+              {
+                icon: Search,
+                title: 'Intelligent Tender Discovery',
+                desc: 'Find relevant opportunities with smart filters',
+              },
+              {
+                icon: FileText,
+                title: 'Complete Document Retrieval',
+                desc: 'Download PDFs, specifications, BOQ, ATC & corrigenda',
+              },
+              {
+                icon: Cpu,
+                title: 'Deterministic Compliance Engine',
+                desc: 'Rule-based eligibility analysis with document citations',
+              },
+              {
+                icon: Sparkles,
+                title: 'AI-Powered Explanations',
+                desc: 'Clear, grounded insights without guessing',
+              },
+              {
+                icon: FolderLock,
+                title: 'Document Vault & Organization',
+                desc: 'Secure storage with auto-categorization',
+              },
+              {
+                icon: TrendingUp,
+                title: 'End-to-End Bid Management',
+                desc: 'Track your bids from analysis to submission',
+              },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <item.icon className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">{item.title}</h4>
+                  <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{item.desc}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">Intelligent Tender Discovery</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  Find relevant opportunities with smart filters
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">Complete Document Retrieval</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  Download PDFs, specifications, BOQ, ATC &amp; corrigenda
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <Cpu className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">Deterministic Compliance Engine</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  Rule-based eligibility analysis with document citations
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">AI-Powered Explanations</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  Clear, grounded insights without guessing
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <FolderLock className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">Document Vault &amp; Organization</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  Secure storage with auto-categorization
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900">End-to-End Bid Management</h4>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                  Track your bids from analysis to submission
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Column 3: Getting Started (Span 3) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-          <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+        <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 space-y-2.5">
+          <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">
             Getting Started
           </h3>
 
-          <div className="space-y-3.5">
+          <div className="space-y-2">
             {[
               {
                 num: '1',
@@ -725,13 +577,13 @@ export const DashboardPage: React.FC = () => {
                 desc: 'Submit through the official portal and track status',
               },
             ].map((step) => (
-              <div key={step.num} className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+              <div key={step.num} className="flex items-start gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                   {step.num}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">{step.title}</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{step.desc}</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-tight">{step.title}</h4>
+                  <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{step.desc}</p>
                 </div>
               </div>
             ))}
