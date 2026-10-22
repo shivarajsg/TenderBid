@@ -97,7 +97,7 @@ export const TendersListPage: React.FC = () => {
     try {
       const run = await tendersApi.refreshTenders({
         source_portal: selectedPortal !== 'ALL' ? selectedPortal : undefined,
-        limit: 20,
+        limit: 2000,
       });
       setSuccessNotice(
         `Live tender refresh completed (${run.source_portal}): ${run.tenders_found} discovered, ${run.tenders_ingested} new ingested, ${run.tenders_updated} updated in database.`
