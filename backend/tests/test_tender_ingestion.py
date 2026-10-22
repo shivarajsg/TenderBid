@@ -116,28 +116,36 @@ async def test_open_gov_connector_normalization():
 @pytest.mark.asyncio
 async def test_ingestion_service_deduplication_and_upsert(db_session: AsyncSession):
     """Verify that multiple sync runs idempotently insert then skip/update without duplicate error."""
+    from unittest.mock import patch, AsyncMock
     service = TenderIngestionService(db_session)
 
-    # First sync: all tenders should be ingested
-    run1 = await service.sync_portal(source_portal="ALL", limit=10)
-    assert run1.status == "SUCCESS"
-    assert run1.tenders_ingested > 0
-    initial_ingested = run1.tenders_ingested
+    # Use deterministic records for unit testing deduplication across repeated passes
+    deterministic_records = service.connectors["GEM"]._fetch_canonical_fallback(10)
+    with patch.object(
+        service.connectors["GEM"],
+        "_fetch_live_gem_bids",
+        AsyncMock(return_value=deterministic_records),
+    ):
+        # First sync: all tenders should be ingested
+        run1 = await service.sync_portal(source_portal="ALL", limit=10)
+        assert run1.status == "SUCCESS"
+        assert run1.tenders_ingested > 0
+        initial_ingested = run1.tenders_ingested
 
-    # Verify rows in DB
-    result = await db_session.execute(select(Tender))
-    tenders = result.scalars().all()
-    assert len(tenders) == initial_ingested
+        # Verify rows in DB
+        result = await db_session.execute(select(Tender))
+        tenders = result.scalars().all()
+        assert len(tenders) == initial_ingested
 
-    # Second sync without force: should skip existing tenders without duplicate violation
-    run2 = await service.sync_portal(source_portal="ALL", limit=10, force=False)
-    assert run2.status == "SUCCESS"
-    assert run2.tenders_ingested == 0
-    assert run2.tenders_skipped == initial_ingested
+        # Second sync without force: should skip existing tenders without duplicate violation
+        run2 = await service.sync_portal(source_portal="ALL", limit=10, force=False)
+        assert run2.status == "SUCCESS"
+        assert run2.tenders_ingested == 0
+        assert run2.tenders_skipped == initial_ingested
 
-    # Count in DB should remain unchanged
-    result2 = await db_session.execute(select(Tender))
-    assert len(result2.scalars().all()) == initial_ingested
+        # Count in DB should remain unchanged
+        result2 = await db_session.execute(select(Tender))
+        assert len(result2.scalars().all()) == initial_ingested
 
 
 @pytest.mark.asyncio
