@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -155,6 +156,23 @@ class TenderIngestionService:
                         checkpoint = getattr(connector, "last_sync_checkpoint", None)
                         if checkpoint:
                             sync_checkpoints[connector.portal_name] = checkpoint
+                    elif connector.portal_name == "GEM":
+                        # Resumable pagination checkpoint lookup for GeM (when GeM is targeted)
+                        start_page = 1
+                        if not force and source_portal.upper() == "GEM":
+                            latest_success = await self.run_repo.get_latest_successful_run(connector.portal_name)
+                            if latest_success and latest_success.run_metadata:
+                                cp = latest_success.run_metadata.get("checkpoints", {}).get("GEM")
+                                if cp:
+                                    try:
+                                        cp_data = json.loads(cp) if isinstance(cp, str) else cp
+                                        start_page = int(cp_data.get("next_page", 1))
+                                    except Exception:
+                                        start_page = 1
+                        records = await connector.fetch_tenders(limit=limit, start_page=start_page)
+                        checkpoint = getattr(connector, "last_sync_checkpoint", None)
+                        if checkpoint:
+                            sync_checkpoints[connector.portal_name] = checkpoint
                     else:
                         records = await connector.fetch_tenders(limit=limit)
 
@@ -253,11 +271,19 @@ class TenderIngestionService:
                 "live_records_count": total_live,
                 "completed_at": now.isoformat(),
             }
-            if final_status == "SUCCESS":
+            if final_status in ("SUCCESS", "PARTIAL"):
                 if sync_checkpoints:
                     run_meta["checkpoints"] = sync_checkpoints
                     if "TENDERKART" in sync_checkpoints:
                         run_meta["next_updated_after"] = sync_checkpoints["TENDERKART"]
+
+                gem_conn = self.connectors.get("GEM")
+                if gem_conn and getattr(gem_conn, "last_crawl_metadata", None):
+                    run_meta["gem_crawl"] = gem_conn.last_crawl_metadata
+                    # If GeM encountered unretrieved pages, report honest partial status
+                    if gem_conn.last_crawl_metadata.get("unretrieved_pages") and final_status == "SUCCESS":
+                        final_status = "PARTIAL"
+
                 tk_conn = self.connectors.get("TENDERKART")
                 if tk_conn and getattr(tk_conn, "filter_checkpoints", None):
                     existing_run = await self.run_repo.get_latest_successful_run("TENDERKART")

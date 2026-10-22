@@ -154,6 +154,7 @@ export interface IngestionRunResponse {
   error_message?: string | null;
   started_at: string;
   completed_at?: string | null;
+  run_metadata?: Record<string, any> | null;
 }
 
 export interface IngestionStatusOverviewResponse {

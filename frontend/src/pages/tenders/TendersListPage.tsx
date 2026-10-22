@@ -31,6 +31,21 @@ import {
   Calendar,
 } from 'lucide-react';
 
+interface GemCrawlMetadata {
+  total_portal_records?: number;
+  total_pages_available?: number;
+  start_page?: number;
+  end_page_crawled?: number;
+  next_page?: number;
+  pages_processed?: number;
+  unique_bids_discovered?: number;
+  unretrieved_pages?: number[];
+  errors_encountered?: string[];
+  crawl_completed?: boolean;
+  is_partial?: boolean;
+  last_retrieved_at?: string;
+}
+
 export const TendersListPage: React.FC = () => {
   const navigate = useNavigate();
   const [tenders, setTenders] = useState<TenderResponse[]>([]);
@@ -46,6 +61,12 @@ export const TendersListPage: React.FC = () => {
   const [selectedPortal, setSelectedPortal] = useState<string>('ALL');
   const [error, setError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [gemMetrics, setGemMetrics] = useState<GemCrawlMetadata | null>(null);
+  const [gemLastRun, setGemLastRun] = useState<{
+    tenders_ingested: number;
+    tenders_updated: number;
+    tenders_skipped: number;
+  } | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -95,13 +116,37 @@ export const TendersListPage: React.FC = () => {
     setError(null);
     setSuccessNotice(null);
     try {
+      const portalParam = selectedPortal !== 'ALL' ? selectedPortal : undefined;
+      const limitParam = selectedPortal === 'GEM' ? 50 : 20;
       const run = await tendersApi.refreshTenders({
-        source_portal: selectedPortal !== 'ALL' ? selectedPortal : undefined,
-        limit: 2000,
+        source_portal: portalParam,
+        limit: limitParam,
       });
-      setSuccessNotice(
-        `Live tender refresh completed (${run.source_portal}): ${run.tenders_found} discovered, ${run.tenders_ingested} new ingested, ${run.tenders_updated} updated in database.`
-      );
+
+      if (run.source_portal === 'GEM' || (run.run_metadata && run.run_metadata.gem_crawl)) {
+        if (run.run_metadata?.gem_crawl) {
+          setGemMetrics(run.run_metadata.gem_crawl as GemCrawlMetadata);
+          setGemLastRun({
+            tenders_ingested: run.tenders_ingested,
+            tenders_updated: run.tenders_updated,
+            tenders_skipped: run.tenders_skipped,
+          });
+        }
+      }
+
+      if (run.source_portal === 'GEM' && run.run_metadata?.gem_crawl) {
+        const crawl = run.run_metadata.gem_crawl as GemCrawlMetadata;
+        const totalFmt = crawl.total_portal_records ? Number(crawl.total_portal_records).toLocaleString('en-IN') : 'dynamic';
+        const pagesFmt = `Pages ${crawl.start_page}–${crawl.end_page_crawled}`;
+        const crawlState = crawl.crawl_completed ? 'Completed' : 'Partial Batch';
+        setSuccessNotice(
+          `GeM Live Refresh [${crawlState}]: ${run.tenders_found} bids discovered across ${pagesFmt} (of ~${totalFmt} total live GeM bids). ${run.tenders_ingested} new ingested, ${run.tenders_updated} updated, ${run.tenders_skipped} skipped.`
+        );
+      } else {
+        setSuccessNotice(
+          `Live tender refresh completed (${run.source_portal}): ${run.tenders_found} discovered, ${run.tenders_ingested} new ingested, ${run.tenders_updated} updated in database.`
+        );
+      }
       setPage(1);
       await fetchTenders(1, pageSize, search, sector, selectedPortal);
     } catch (err: unknown) {
@@ -322,6 +367,91 @@ export const TendersListPage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* GeM Live Crawl Transparency Panel */}
+      {selectedPortal === 'GEM' && gemMetrics && (
+        <div
+          data-testid="gem-crawl-transparency-card"
+          className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-xs text-slate-700 shadow-xs space-y-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/70 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-bold text-emerald-950 text-sm">Official GeM Live Pagination & Discovery Transparency</span>
+              <span
+                data-testid="badge-crawl-status"
+                className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
+                  gemMetrics.crawl_completed
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : 'bg-amber-100 text-amber-900 border border-amber-300'
+                }`}
+              >
+                {gemMetrics.crawl_completed ? 'Catalog Crawl Completed' : 'Bounded Batch (Partial Crawl)'}
+              </span>
+            </div>
+            {gemMetrics.last_retrieved_at && (
+              <span className="text-slate-500 text-[11px]">
+                Last GeM Refresh: {new Date(gemMetrics.last_retrieved_at).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">GeM Portal Total</div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5" data-testid="metric-gem-total">
+                {gemMetrics.total_portal_records ? gemMetrics.total_portal_records.toLocaleString('en-IN') : 'N/A'}
+              </div>
+            </div>
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Pages Processed</div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5" data-testid="metric-gem-pages">
+                {gemMetrics.pages_processed || 0} (p.{gemMetrics.start_page}–{gemMetrics.end_page_crawled})
+              </div>
+            </div>
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Live Bids Found</div>
+              <div className="font-bold text-slate-900 text-sm mt-0.5" data-testid="metric-gem-discovered">
+                {gemMetrics.unique_bids_discovered || 0}
+              </div>
+            </div>
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">New Ingested</div>
+              <div className="font-bold text-emerald-700 text-sm mt-0.5" data-testid="metric-gem-ingested">
+                {gemLastRun ? gemLastRun.tenders_ingested : 0}
+              </div>
+            </div>
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Updated</div>
+              <div className="font-bold text-blue-700 text-sm mt-0.5" data-testid="metric-gem-updated">
+                {gemLastRun ? gemLastRun.tenders_updated : 0}
+              </div>
+            </div>
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Duplicates Skipped</div>
+              <div className="font-bold text-slate-600 text-sm mt-0.5" data-testid="metric-gem-skipped">
+                {gemLastRun ? gemLastRun.tenders_skipped : 0}
+              </div>
+            </div>
+            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
+              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Unretrieved Pages</div>
+              <div className="font-bold text-slate-700 text-sm mt-0.5" data-testid="metric-gem-unretrieved">
+                {gemMetrics.unretrieved_pages && gemMetrics.unretrieved_pages.length > 0
+                  ? gemMetrics.unretrieved_pages.join(', ')
+                  : '0 (None)'}
+              </div>
+            </div>
+          </div>
+
+          {!gemMetrics.crawl_completed && (
+            <div className="text-[11px] text-emerald-800 flex items-center justify-between">
+              <span>
+                Crawl checkpoint cursor: next batch will resume from <strong>Page {gemMetrics.next_page}</strong>. Click <strong>Refresh Tender List</strong> to continue crawling subsequent pages.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search & Filter Bar */}
       <form

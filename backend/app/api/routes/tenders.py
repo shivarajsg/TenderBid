@@ -132,7 +132,7 @@ async def get_ingestion_status(
 )
 async def refresh_tenders(
     source_portal: Optional[str] = Query("ALL", description="Filter source portal: ALL, GEM, CPPP, etc."),
-    limit: Optional[int] = Query(20, ge=1, le=100, description="Max tenders to sync per portal"),
+    limit: Optional[int] = Query(50, ge=1, le=1000, description="Max tenders to sync per portal"),
     force: bool = Query(False, description="Force update existing records"),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -145,7 +145,7 @@ async def refresh_tenders(
     service = TenderIngestionService(session)
     run = await service.sync_portal(
         source_portal=source_portal or "ALL",
-        limit=limit or 20,
+        limit=limit or 50,
         force=force,
     )
     return IngestionRunResponse.model_validate(run)

@@ -1,9 +1,10 @@
+import asyncio
 import json
 import logging
 import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 import httpx
 
 from app.core.config import get_settings
@@ -172,6 +173,8 @@ class GeMTenderConnector(BaseTenderConnector):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/javascript, */*; q=0.01",
         }
+        self.last_sync_checkpoint: Optional[str] = None
+        self.last_crawl_metadata: Optional[Dict[str, Any]] = None
 
     @property
     def portal_name(self) -> str:
@@ -215,29 +218,82 @@ class GeMTenderConnector(BaseTenderConnector):
 
         return status_info
 
-    async def fetch_tenders(self, limit: int = 50) -> List[RawTenderRecord]:
+    async def fetch_tenders(
+        self,
+        limit: int = 50,
+        start_page: int = 1,
+        mode: str = "live",
+        fallback_to_fixture: bool = False,
+        max_pages: Optional[int] = None,
+    ) -> List[RawTenderRecord]:
         """
-        Fetch and normalize live GeM tender notices with resilient fallback.
-        1. Attempt live discovery from bidplus.gem.gov.in/all-bids-data.
-        2. If live query fails or returns empty, fall back to canonical high-fidelity GeM catalog.
+        Fetch and normalize live GeM tender notices with pagination.
+
+        Live mode (default, mode="live"):
+        - Queries live GeM portal with CSRF session and pagination.
+        - Preserves genuine live records.
+        - Does NOT silently substitute fixture data on network/parsing errors.
+        - Reports partial crawls or honest exceptions.
+
+        Fixture mode (mode="fixture" or fallback_to_fixture=True):
+        - Provides verified canonical GeM catalog notices for regression testing and offline demo mode.
         """
+        if mode == "fixture":
+            return self._fetch_canonical_fallback(limit=limit)
+
         try:
-            live_records = await self._fetch_live_gem_bids(limit=limit)
-            if live_records:
-                logger.info("[GeM Connector] Successfully retrieved %d LIVE records from GeM portal.", len(live_records))
-                return live_records
+            live_records = await self._fetch_live_gem_bids(
+                limit=limit,
+                start_page=start_page,
+                max_pages=max_pages,
+            )
+            if not live_records:
+                if fallback_to_fixture:
+                    logger.warning("[GeM Connector] Live GeM fetch returned 0 records. Falling back to canonical catalog.")
+                    return self._fetch_canonical_fallback(limit=limit)
+                raise RuntimeError("GeM live portal returned 0 records for requested pages.")
+            return live_records
         except Exception as exc:
-            logger.warning("[GeM Connector] Live GeM fetch degraded (%s). Falling back to canonical catalog.", exc)
+            if fallback_to_fixture:
+                logger.warning("[GeM Connector] Live GeM fetch failed (%s). Falling back to canonical catalog.", exc)
+                return self._fetch_canonical_fallback(limit=limit)
+            logger.error("[GeM Connector] Live GeM fetch failed: %s", exc)
+            raise
 
-        # Fallback to verified canonical GeM catalog
-        return self._fetch_canonical_fallback(limit=limit)
-
-    async def _fetch_live_gem_bids(self, limit: int = 50) -> List[RawTenderRecord]:
-        """Fetch ongoing bids directly from bidplus.gem.gov.in/all-bids-data."""
+    async def _fetch_live_gem_bids(
+        self,
+        limit: int = 50,
+        start_page: int = 1,
+        max_pages: Optional[int] = None,
+    ) -> List[RawTenderRecord]:
+        """
+        Fetch ongoing bids directly from bidplus.gem.gov.in/all-bids-data using live pagination.
+        - Obtains CSRF and session cookies from initial listing.
+        - Determines dynamic total record count from GeM Solr numFound.
+        - Crawls pages starting from start_page.
+        - Deduplicates bids across pages using unique b_id / b_bid_number.
+        - Updates checkpoint and crawl metadata.
+        """
         records: List[RawTenderRecord] = []
+        seen_bid_ids: Set[str] = set()
+        unretrieved_pages: List[int] = []
+        errors_encountered: List[str] = []
         now = datetime.now(timezone.utc)
 
-        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True, headers=self.headers) as client:
+        total_portal_records = 0
+        total_portal_pages = 0
+
+        # Calculate pages to fetch in this batch (GeM yields 10 bids per page)
+        effective_limit = max(1, limit) if limit else 50
+        pages_needed = max(1, (effective_limit + 9) // 10)
+        if max_pages is not None:
+            pages_needed = min(pages_needed, max_pages)
+        # Cap batch to prevent socket timeout (max 100 pages = 1000 tenders per batch)
+        pages_needed = min(pages_needed, 100)
+
+        end_page = start_page + pages_needed - 1
+
+        async with httpx.AsyncClient(timeout=25.0, follow_redirects=True, headers=self.headers) as client:
             # Step 1: Request all-bids page to obtain CSRF token and session cookies
             init_resp = await client.get(self.official_url)
             if init_resp.status_code != 200:
@@ -249,12 +305,18 @@ class GeMTenderConnector(BaseTenderConnector):
 
             csrf_token = csrf_match.group(1)
 
-            # Step 2: Calculate pages needed (10 records per page on GeM)
-            max_pages = max(1, (min(limit, 100) + 9) // 10)
-
-            for page_num in range(1, max_pages + 1):
-                if len(records) >= limit:
+            # Step 2: Iterate across pages
+            last_crawled_page = start_page - 1
+            for page_num in range(start_page, end_page + 1):
+                if len(records) >= effective_limit:
                     break
+                if total_portal_pages > 0 and page_num > total_portal_pages:
+                    logger.info("[GeM Connector] Reached end of GeM catalog at page %d (total %d)", page_num, total_portal_pages)
+                    break
+
+                # Safe request pacing between pages
+                if page_num > start_page:
+                    await asyncio.sleep(0.15)
 
                 postdata = {
                     "page": page_num,
@@ -268,40 +330,69 @@ class GeMTenderConnector(BaseTenderConnector):
                     },
                 }
 
-                resp = await client.post(
-                    "https://bidplus.gem.gov.in/all-bids-data",
-                    data={"payload": json.dumps(postdata), "csrf_bd_gem_nk": csrf_token},
-                    headers={
-                        "X-Requested-With": "XMLHttpRequest",
-                        "Referer": self.official_url,
-                        "Origin": "https://bidplus.gem.gov.in",
-                    },
-                )
+                try:
+                    resp = await client.post(
+                        "https://bidplus.gem.gov.in/all-bids-data",
+                        data={"payload": json.dumps(postdata), "csrf_bd_gem_nk": csrf_token},
+                        headers={
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Referer": self.official_url,
+                            "Origin": "https://bidplus.gem.gov.in",
+                        },
+                    )
+                except Exception as req_err:
+                    logger.warning("[GeM Connector] Page %d network error: %s", page_num, req_err)
+                    unretrieved_pages.append(page_num)
+                    errors_encountered.append(f"Page {page_num}: {str(req_err)}")
+                    if not records:
+                        raise RuntimeError(f"GeM network error on page {page_num}: {str(req_err)}")
+                    break
 
                 if resp.status_code != 200:
                     logger.warning("[GeM Connector] Page %d returned HTTP %d", page_num, resp.status_code)
+                    unretrieved_pages.append(page_num)
+                    errors_encountered.append(f"Page {page_num}: HTTP {resp.status_code}")
+                    if not records:
+                        raise RuntimeError(f"GeM page {page_num} returned HTTP {resp.status_code}")
                     break
 
                 try:
                     payload = resp.json()
-                except Exception:
+                except Exception as json_err:
                     logger.warning("[GeM Connector] Page %d response was not valid JSON", page_num)
+                    unretrieved_pages.append(page_num)
+                    errors_encountered.append(f"Page {page_num}: Invalid JSON")
+                    if not records:
+                        raise RuntimeError(f"GeM page {page_num} returned non-JSON response")
                     break
 
-                docs = payload.get("response", {}).get("response", {}).get("docs", [])
+                resp_sub = payload.get("response", {}).get("response", {})
+                num_found = resp_sub.get("numFound", 0)
+                if num_found > 0:
+                    total_portal_records = num_found
+                    total_portal_pages = (total_portal_records + 9) // 10
+
+                docs = resp_sub.get("docs", [])
                 if not docs:
+                    logger.info("[GeM Connector] No documents returned on page %d; pagination reached end of results", page_num)
+                    last_crawled_page = page_num
                     break
 
-                total_portal_records = payload.get("response", {}).get("response", {}).get("numFound", 0)
+                last_crawled_page = page_num
 
                 for doc in docs:
-                    if len(records) >= limit:
+                    if len(records) >= effective_limit:
                         break
 
                     b_id = doc.get("b_id", [doc.get("id")])[0]
                     b_bid_number = doc.get("b_bid_number", [""])[0]
                     if not b_bid_number or not b_id:
                         continue
+
+                    str_bid_id = str(b_id)
+                    if str_bid_id in seen_bid_ids:
+                        continue
+                    seen_bid_ids.add(str_bid_id)
 
                     category = doc.get("b_category_name", [""])[0]
                     quantity = doc.get("b_total_quantity", [None])[0]
@@ -357,7 +448,7 @@ class GeMTenderConnector(BaseTenderConnector):
                         sector="Public Procurement & Supplies",
                         submission_deadline=deadline,
                         source_portal=self.portal_name,
-                        source_tender_id=str(b_id),
+                        source_tender_id=str_bid_id,
                         estimated_budget_inr=None,
                         emd_amount_inr=None,
                         msme_emd_exemption=True,
@@ -373,7 +464,7 @@ class GeMTenderConnector(BaseTenderConnector):
                             ],
                         },
                         ingestion_metadata={
-                            "gem_bid_id": str(b_id),
+                            "gem_bid_id": str_bid_id,
                             "gem_category": category,
                             "gem_quantity": quantity,
                             "gem_bid_type": b_bid_type,
@@ -381,10 +472,12 @@ class GeMTenderConnector(BaseTenderConnector):
                             "ministry": min_name,
                             "department": dept_name,
                             "total_portal_records": total_portal_records,
+                            "page_discovered": page_num,
+                            "is_fixture": False,
                             "data_source_mode": "LIVE_GEM_PORTAL",
                             "last_retrieved_at": now.isoformat(),
                             "raw_payload": {
-                                "bidId": str(b_id),
+                                "bidId": str_bid_id,
                                 "bidNumber": b_bid_number,
                                 "category": category,
                                 "quantity": quantity,
@@ -397,6 +490,32 @@ class GeMTenderConnector(BaseTenderConnector):
                         },
                     )
                     records.append(record)
+
+        # Step 3: Compute checkpoint & crawl metadata
+        crawl_exhausted = bool(total_portal_pages > 0 and last_crawled_page >= total_portal_pages)
+        next_page = 1 if crawl_exhausted else last_crawled_page + 1
+
+        self.last_sync_checkpoint = json.dumps({
+            "next_page": next_page,
+            "last_page": last_crawled_page,
+            "total_records": total_portal_records,
+        })
+
+        pages_processed = max(0, last_crawled_page - start_page + 1)
+        self.last_crawl_metadata = {
+            "total_portal_records": total_portal_records,
+            "total_pages_available": total_portal_pages,
+            "start_page": start_page,
+            "end_page_crawled": last_crawled_page,
+            "next_page": next_page,
+            "pages_processed": pages_processed,
+            "unique_bids_discovered": len(records),
+            "unretrieved_pages": unretrieved_pages,
+            "errors_encountered": errors_encountered,
+            "crawl_completed": crawl_exhausted,
+            "is_partial": not crawl_exhausted,
+            "last_retrieved_at": now.isoformat(),
+        }
 
         return records
 

@@ -405,4 +405,82 @@ describe('TendersListPage Component', () => {
       expect(screen.getByText('Download Tender PDF Now')).toBeInTheDocument();
     });
   });
+
+  it('renders GeM live crawl transparency metrics panel when GeM portal refresh returns pagination metadata', async () => {
+    vi.mocked(tendersApi.listTenders).mockResolvedValue({
+      items: [
+        {
+          id: 'gem-bid-1',
+          tender_reference: 'GEM/2026/B/8147949',
+          title: 'Rapid Diagnostic Kit',
+          issuing_authority: 'Ministry of Health',
+          sector: 'Healthcare',
+          msme_emd_exemption: true,
+          submission_deadline: '2026-12-31T23:59:59Z',
+          processing_status: 'PENDING',
+          documents: [],
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+          source_portal: 'GEM',
+        },
+      ],
+      total: 1,
+      skip: 0,
+      limit: 12,
+    });
+
+    vi.mocked(tendersApi.refreshTenders).mockResolvedValue({
+      id: 'mock-gem-run-id',
+      source_portal: 'GEM',
+      status: 'SUCCESS',
+      tenders_found: 50,
+      tenders_ingested: 10,
+      tenders_updated: 5,
+      tenders_skipped: 35,
+      started_at: '2026-01-01T00:00:00Z',
+      completed_at: '2026-01-01T00:01:00Z',
+      run_metadata: {
+        gem_crawl: {
+          total_portal_records: 47245,
+          total_pages_available: 4725,
+          start_page: 1,
+          end_page_crawled: 5,
+          next_page: 6,
+          pages_processed: 5,
+          unique_bids_discovered: 50,
+          unretrieved_pages: [],
+          crawl_completed: false,
+          is_partial: true,
+          last_retrieved_at: '2026-01-01T00:01:00Z',
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <TendersListPage />
+      </MemoryRouter>
+    );
+
+    // Switch to GeM Portal tab
+    fireEvent.click(screen.getByText('GeM Portal'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Refresh Tender List')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Refresh Tender List'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('gem-crawl-transparency-card')).toBeInTheDocument();
+      expect(screen.getByTestId('metric-gem-total')).toHaveTextContent('47,245');
+      expect(screen.getByTestId('metric-gem-pages')).toHaveTextContent('5 (p.1–5)');
+      expect(screen.getByTestId('metric-gem-discovered')).toHaveTextContent('50');
+      expect(screen.getByTestId('metric-gem-ingested')).toHaveTextContent('10');
+      expect(screen.getByTestId('metric-gem-updated')).toHaveTextContent('5');
+      expect(screen.getByTestId('metric-gem-skipped')).toHaveTextContent('35');
+      expect(screen.getByTestId('metric-gem-unretrieved')).toHaveTextContent('0 (None)');
+      expect(screen.getByTestId('badge-crawl-status')).toHaveTextContent('Bounded Batch (Partial Crawl)');
+    });
+  });
 });
