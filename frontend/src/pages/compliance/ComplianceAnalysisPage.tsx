@@ -155,7 +155,7 @@ export const ComplianceAnalysisPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <FileCheck2 className="w-7 h-7 text-blue-600" />

@@ -181,7 +181,7 @@ export const ComplianceReportDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl print:p-0">
+    <div className="space-y-8 w-full print:p-0">
       {/* Top Navigation & Print */}
       <div className="flex items-center justify-between print:hidden">
         <Link

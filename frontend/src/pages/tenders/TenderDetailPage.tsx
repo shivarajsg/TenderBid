@@ -210,7 +210,7 @@ export const TenderDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 w-full">
       {/* Back button & Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link

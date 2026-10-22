@@ -106,7 +106,7 @@ export const DashboardPage: React.FC = () => {
     : 'Apex Electrical Systems Test Private Limited (MEDIUM • Electrical Engineering / Power Systems)';
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* 1. HERO CARD BANNER WITH ILLUSTRATION */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs relative overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">

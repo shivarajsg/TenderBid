@@ -85,7 +85,7 @@ export const AdminTenderFormPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 w-full">
       <div className="flex items-center gap-2">
         <Link
           to="/admin/tenders"
