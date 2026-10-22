@@ -39,7 +39,7 @@ export const Sidebar: React.FC = () => {
     }`;
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] flex flex-col justify-between p-4">
+    <aside className="w-64 shrink-0 bg-white border-r border-slate-200 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto flex flex-col p-4 z-20">
       <div className="space-y-6">
         <div>
           <p className="px-3 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
@@ -79,13 +79,6 @@ export const Sidebar: React.FC = () => {
             </nav>
           </div>
         )}
-      </div>
-
-      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-        <p className="font-semibold text-slate-700">Deterministic Engine</p>
-        <p className="mt-0.5 text-[11px] text-slate-500">
-          Evaluations strictly driven by Python rule engine. RAG & AI provide explanation and citations.
-        </p>
       </div>
     </aside>
   );

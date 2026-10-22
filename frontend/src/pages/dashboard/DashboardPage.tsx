@@ -113,7 +113,7 @@ export const DashboardPage: React.FC = () => {
           {/* Left Text & CTA */}
           <div className="lg:col-span-6 space-y-4 z-10">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Welcome back, {user?.full_name || 'kumar shivaraj'}
+              Welcome back
             </h1>
 
             <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-slate-700">

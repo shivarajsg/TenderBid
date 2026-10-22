@@ -335,196 +335,199 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header with Title and Auto-Ingestion Refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900">Tender Opportunities</h1>
-            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-              <Globe2 className="w-3 h-3 text-blue-500" />
-              Live Govt Feeds
-            </span>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Automated government discovery across GeM, CPPP & Open Procurement feeds with deterministic compliance
-          </p>
-        </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshTenderList}
-            disabled={loading || refreshing}
-            icon={<RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />}
-          >
-            {refreshing ? 'Syncing...' : 'Refresh Tender List'}
-          </Button>
-        </div>
-      </div>
-
-      {successNotice && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{successNotice}</span>
-          </div>
-          <button
-            onClick={() => setSuccessNotice(null)}
-            className="text-emerald-600 hover:text-emerald-900 ml-2 font-bold"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
-
-      {/* Official Procurement Source Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        <span className="text-slate-400 font-medium whitespace-nowrap mr-1">Filter Source:</span>
-        {[
-          { id: 'ALL', label: 'All Sources' },
-          { id: 'GEM', label: 'GeM Portal' },
-          { id: 'CPPP', label: 'CPPP e-Procure' },
-          { id: 'OPEN_GOV', label: 'Open Gov PSU' },
-          { id: 'TENDERKART', label: 'TenderKart Feed' },
-          { id: 'APIFY', label: 'Apify Actor Feed' },
-          { id: 'MANUAL', label: 'Direct Notices' },
-        ].map((tab) => {
-          const isActive = selectedPortal === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setSelectedPortal(tab.id)}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* GeM Live Crawl Transparency Panel */}
-      {selectedPortal === 'GEM' && gemMetrics && (
-        <div
-          data-testid="gem-crawl-transparency-card"
-          className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-xs text-slate-700 shadow-xs space-y-3"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/70 pb-2">
+    <div className="space-y-4">
+      {/* Sticky Compressed Header & Filter Controls Area */}
+      <div className="sticky top-16 z-20 bg-slate-50/95 backdrop-blur-xs -mt-6 md:-mt-8 pt-4 md:pt-6 pb-2.5 space-y-2.5 border-b border-slate-200/80">
+        {/* Header with Title and Auto-Ingestion Refresh */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold text-emerald-950 text-sm">Official GeM Live Pagination & Discovery Transparency</span>
-              <span
-                data-testid="badge-crawl-status"
-                className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
-                  gemMetrics.crawl_completed
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'bg-amber-100 text-amber-900 border border-amber-300'
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">Tender Opportunities</h1>
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                <Globe2 className="w-3 h-3 text-blue-500" />
+                Live Govt Feeds
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Automated government discovery across GeM, CPPP &amp; Open Procurement feeds with deterministic compliance
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshTenderList}
+              disabled={loading || refreshing}
+              icon={<RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />}
+            >
+              {refreshing ? 'Syncing...' : 'Refresh Tender List'}
+            </Button>
+          </div>
+        </div>
+
+        {successNotice && (
+          <div className="py-2 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successNotice}</span>
+            </div>
+            <button
+              onClick={() => setSuccessNotice(null)}
+              className="text-emerald-600 hover:text-emerald-900 ml-2 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
+
+        {/* Official Procurement Source Filter Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs scrollbar-thin">
+          <span className="text-slate-400 font-medium whitespace-nowrap text-xs mr-1">Filter Source:</span>
+          {[
+            { id: 'ALL', label: 'All Sources' },
+            { id: 'GEM', label: 'GeM Portal' },
+            { id: 'CPPP', label: 'CPPP e-Procure' },
+            { id: 'OPEN_GOV', label: 'Open Gov PSU' },
+            { id: 'TENDERKART', label: 'TenderKart Feed' },
+            { id: 'APIFY', label: 'Apify Actor Feed' },
+            { id: 'MANUAL', label: 'Direct Notices' },
+          ].map((tab) => {
+            const isActive = selectedPortal === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedPortal(tab.id)}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100/80'
                 }`}
               >
-                {gemMetrics.crawl_completed ? 'Catalog Crawl Completed' : 'Bounded Batch (Partial Crawl)'}
-              </span>
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* GeM Live Crawl Transparency Panel */}
+        {selectedPortal === 'GEM' && gemMetrics && (
+          <div
+            data-testid="gem-crawl-transparency-card"
+            className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 text-xs text-slate-700 shadow-2xs space-y-2 max-h-48 overflow-y-auto"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/70 pb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold text-emerald-950 text-xs sm:text-sm">Official GeM Live Pagination &amp; Discovery Transparency</span>
+                <span
+                  data-testid="badge-crawl-status"
+                  className={`px-2 py-0.5 rounded-full font-semibold text-[10px] ${
+                    gemMetrics.crawl_completed
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}
+                >
+                  {gemMetrics.crawl_completed ? 'Catalog Crawl Completed' : 'Bounded Batch (Partial Crawl)'}
+                </span>
+              </div>
+              {gemMetrics.last_retrieved_at && (
+                <span className="text-slate-500 text-[10px]">
+                  Last GeM Refresh: {new Date(gemMetrics.last_retrieved_at).toLocaleString()}
+                </span>
+              )}
             </div>
-            {gemMetrics.last_retrieved_at && (
-              <span className="text-slate-500 text-[11px]">
-                Last GeM Refresh: {new Date(gemMetrics.last_retrieved_at).toLocaleString()}
-              </span>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">GeM Portal Total</div>
+                <div className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-total">
+                  {gemMetrics.total_portal_records ? gemMetrics.total_portal_records.toLocaleString('en-IN') : 'N/A'}
+                </div>
+              </div>
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">Pages Processed</div>
+                <div className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-pages">
+                  {gemMetrics.pages_processed || 0} (p.{gemMetrics.start_page}–{gemMetrics.end_page_crawled})
+                </div>
+              </div>
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">Live Bids Found</div>
+                <div className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-discovered">
+                  {gemMetrics.unique_bids_discovered || 0}
+                </div>
+              </div>
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">New Ingested</div>
+                <div className="font-bold text-emerald-700 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-ingested">
+                  {gemLastRun ? gemLastRun.tenders_ingested : 0}
+                </div>
+              </div>
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">Updated</div>
+                <div className="font-bold text-blue-700 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-updated">
+                  {gemLastRun ? gemLastRun.tenders_updated : 0}
+                </div>
+              </div>
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">Duplicates Skipped</div>
+                <div className="font-bold text-slate-600 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-skipped">
+                  {gemLastRun ? gemLastRun.tenders_skipped : 0}
+                </div>
+              </div>
+              <div className="bg-white/90 p-2 rounded-lg border border-emerald-100">
+                <div className="text-slate-500 text-[9px] uppercase tracking-wider font-semibold">Unretrieved Pages</div>
+                <div className="font-bold text-slate-700 text-xs sm:text-sm mt-0.5" data-testid="metric-gem-unretrieved">
+                  {gemMetrics.unretrieved_pages && gemMetrics.unretrieved_pages.length > 0
+                    ? gemMetrics.unretrieved_pages.join(', ')
+                    : '0 (None)'}
+                </div>
+              </div>
+            </div>
+
+            {!gemMetrics.crawl_completed && (
+              <div className="text-[10px] text-emerald-800 flex items-center justify-between">
+                <span>
+                  Crawl checkpoint cursor: next batch will resume from <strong>Page {gemMetrics.next_page}</strong>. Click <strong>Refresh Tender List</strong> to continue crawling subsequent pages.
+                </span>
+              </div>
             )}
           </div>
+        )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">GeM Portal Total</div>
-              <div className="font-bold text-slate-900 text-sm mt-0.5" data-testid="metric-gem-total">
-                {gemMetrics.total_portal_records ? gemMetrics.total_portal_records.toLocaleString('en-IN') : 'N/A'}
-              </div>
-            </div>
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Pages Processed</div>
-              <div className="font-bold text-slate-900 text-sm mt-0.5" data-testid="metric-gem-pages">
-                {gemMetrics.pages_processed || 0} (p.{gemMetrics.start_page}–{gemMetrics.end_page_crawled})
-              </div>
-            </div>
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Live Bids Found</div>
-              <div className="font-bold text-slate-900 text-sm mt-0.5" data-testid="metric-gem-discovered">
-                {gemMetrics.unique_bids_discovered || 0}
-              </div>
-            </div>
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">New Ingested</div>
-              <div className="font-bold text-emerald-700 text-sm mt-0.5" data-testid="metric-gem-ingested">
-                {gemLastRun ? gemLastRun.tenders_ingested : 0}
-              </div>
-            </div>
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Updated</div>
-              <div className="font-bold text-blue-700 text-sm mt-0.5" data-testid="metric-gem-updated">
-                {gemLastRun ? gemLastRun.tenders_updated : 0}
-              </div>
-            </div>
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Duplicates Skipped</div>
-              <div className="font-bold text-slate-600 text-sm mt-0.5" data-testid="metric-gem-skipped">
-                {gemLastRun ? gemLastRun.tenders_skipped : 0}
-              </div>
-            </div>
-            <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100">
-              <div className="text-slate-500 text-[10px] uppercase tracking-wider font-semibold">Unretrieved Pages</div>
-              <div className="font-bold text-slate-700 text-sm mt-0.5" data-testid="metric-gem-unretrieved">
-                {gemMetrics.unretrieved_pages && gemMetrics.unretrieved_pages.length > 0
-                  ? gemMetrics.unretrieved_pages.join(', ')
-                  : '0 (None)'}
-              </div>
-            </div>
+        {/* Search & Filter Bar */}
+        <form
+          onSubmit={handleSearchSubmit}
+          className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row gap-2 items-center"
+        >
+          <div className="flex-1 w-full">
+            <Input
+              placeholder="Search by tender reference, title, or authority..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          <div className="w-full sm:w-52">
+            <Input
+              placeholder="Filter by sector..."
+              value={sector}
+              onChange={(e) => setSector(e.target.value)}
+            />
+          </div>
+          <Button type="submit" size="sm" icon={<Search className="w-3.5 h-3.5" />} className="w-full sm:w-auto h-9">
+            Search
+          </Button>
+        </form>
 
-          {!gemMetrics.crawl_completed && (
-            <div className="text-[11px] text-emerald-800 flex items-center justify-between">
-              <span>
-                Crawl checkpoint cursor: next batch will resume from <strong>Page {gemMetrics.next_page}</strong>. Click <strong>Refresh Tender List</strong> to continue crawling subsequent pages.
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Search & Filter Bar */}
-      <form
-        onSubmit={handleSearchSubmit}
-        className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3"
-      >
-        <div className="flex-1">
-          <Input
-            placeholder="Search by tender reference, title, or authority..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="sm:w-56">
-          <Input
-            placeholder="Filter by sector..."
-            value={sector}
-            onChange={(e) => setSector(e.target.value)}
-          />
-        </div>
-        <Button type="submit" icon={<Search className="w-4 h-4" />}>
-          Search
-        </Button>
-      </form>
-
-      {/* Results Header */}
-      <div className="flex items-center justify-between text-xs font-medium text-slate-500">
-        <div>
-          Found <span className="font-bold text-slate-800">{total}</span> procurement tenders
-        </div>
-        <div className="text-[11px] text-slate-400">
-          Auto-synchronized with official procurement portals
+        {/* Results Header */}
+        <div className="flex items-center justify-between text-xs font-medium text-slate-500 pt-0.5">
+          <div>
+            Found <span className="font-bold text-slate-800">{total}</span> procurement tenders
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Auto-synchronized with official procurement portals
+          </div>
         </div>
       </div>
 

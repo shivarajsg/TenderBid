@@ -226,10 +226,6 @@ export const Navbar: React.FC = () => {
                 )}
                 {user.role}
               </span>
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-semibold text-slate-800">{user.full_name}</p>
-                <p className="text-xs text-slate-500">{user.email}</p>
-              </div>
             </div>
 
             <Button
