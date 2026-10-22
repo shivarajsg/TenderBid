@@ -44,7 +44,6 @@ downloads/
 backend/downloads/
 data/
 backend/data/
-frontend/public/images/tender-cache/
 *.sqlite
 *.sqlite3
 *.db
