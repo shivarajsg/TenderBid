@@ -162,3 +162,45 @@ class TenderQAResponse(BaseModel):
     confidence: str  # HIGH, MEDIUM, LOW
     citations: List[QACitation] = []
 
+
+# ============================================================================
+# Extracted Tender Knowledge Schemas
+# ============================================================================
+
+class ExtractedChunkInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    chunk_id: str
+    document_id: uuid.UUID
+    source_filename: str
+    page_number: int
+    chunk_index: int
+    chunk_text: str
+    extraction_method: str
+
+
+class ExtractedDocumentInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    document_id: uuid.UUID
+    original_filename: str
+    document_category: str
+    processing_status: str
+    total_pages: Optional[int] = None
+    indexed_chunks: int = 0
+    extraction_metadata: Optional[Dict[str, Any]] = None
+
+
+class TenderExtractedKnowledgeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    tender_id: uuid.UUID
+    tender_reference: str
+    title: str
+    status: str
+    total_documents: int
+    total_chunks: int
+    documents: List[ExtractedDocumentInfo] = []
+    chunks: List[ExtractedChunkInfo] = []
+
+

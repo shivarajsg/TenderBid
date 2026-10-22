@@ -163,3 +163,77 @@ async def test_tender_qa_unauthorized_and_invalid_tender(
         json={"question": "What is the budget?"},
     )
     assert resp.status_code == 404
+
+
+
+@pytest.mark.asyncio
+async def test_tender_extracted_knowledge_endpoint(
+    client: AsyncClient,
+    db_session: AsyncSession,
+):
+    """Verify that GET /tenders/{tender_id}/extracted-knowledge returns extracted documents and chunks."""
+    user = User(
+        id=uuid.uuid4(),
+        email="msme_knowledge@example.com",
+        hashed_password="hash",
+        full_name="MSME Knowledge User",
+        role="MSME_USER",
+        is_active=True,
+    )
+    db_session.add(user)
+
+    tender = Tender(
+        id=uuid.uuid4(),
+        tender_reference="TENDER/KNOWLEDGE/001",
+        title="Supply of High-Voltage Cables",
+        issuing_authority="PGCIL",
+        sector="Power",
+        submission_deadline=datetime(2026, 12, 31, 12, 0, tzinfo=timezone.utc),
+        processing_status="INDEXED",
+    )
+    db_session.add(tender)
+
+    doc = Document(
+        id=uuid.uuid4(),
+        tender_id=tender.id,
+        entity_type="TENDER",
+        document_category="TENDER_NOTICE",
+        original_filename="Cable_Spec.pdf",
+        storage_path="tenders/Cable_Spec.pdf",
+        mime_type="application/pdf",
+        file_size_bytes=2048,
+        sha256_hash="cablesha123",
+        total_pages=5,
+        indexed_chunks=1,
+        processing_status="INDEXED",
+        verification_status="UNVERIFIED",
+    )
+    db_session.add(doc)
+
+    chunk = DocumentChunkModel(
+        id=str(uuid.uuid4()),
+        document_id=doc.id,
+        tender_id=tender.id,
+        source_filename="Cable_Spec.pdf",
+        page_number=1,
+        chunk_index=0,
+        char_start=0,
+        char_end=150,
+        sha256_hash="cablesha123",
+        chunk_text="Technical Specification: 66kV XLPE Insulated Aluminum Conductor Armored Cable conforming to IS 7098 Part 3.",
+        extraction_method="pymupdf_direct",
+    )
+    db_session.add(chunk)
+    await db_session.commit()
+
+    token = create_access_token(subject=str(user.id), role="MSME_USER")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = await client.get(f"/api/v1/tenders/{tender.id}/extracted-knowledge", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["tender_reference"] == "TENDER/KNOWLEDGE/001"
+    assert data["total_documents"] == 1
+    assert data["total_chunks"] == 1
+    assert data["documents"][0]["original_filename"] == "Cable_Spec.pdf"
+    assert "66kV XLPE" in data["chunks"][0]["chunk_text"]

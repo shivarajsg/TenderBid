@@ -13,10 +13,13 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.tender import (
     ApproveRequirementsRequest,
+    ExtractedChunkInfo,
+    ExtractedDocumentInfo,
     FetchTenderDocumentsResponse,
     ProposedRequirementsBundle,
     TenderCreate,
     TenderDocumentResponse,
+    TenderExtractedKnowledgeResponse,
     TenderListResponse,
     TenderProcessingStatusResponse,
     TenderQARequest,
@@ -280,6 +283,84 @@ async def download_tender_document(
         path=str(file_path),
         filename=doc.original_filename,
         media_type="application/pdf",
+    )
+
+
+@router.get(
+    "/tenders/{tender_id}/extracted-knowledge",
+    response_model=TenderExtractedKnowledgeResponse,
+    summary="Get extracted document knowledge for this tender (pages, chunks, text)",
+)
+async def get_tender_extracted_knowledge(
+    tender_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieve authoritative extracted document knowledge for this tender.
+    If downloaded documents have not yet been extracted, automatically processes them.
+    Returns documents, chunk count, and extracted chunks for AI contextual evaluation.
+    """
+    tender_service = TenderService(session)
+    try:
+        tender = await tender_service.get_tender(tender_id)
+    except TenderNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    # Auto-extract if any documents exist and are not yet INDEXED
+    unindexed = [d for d in tender.documents if d.processing_status != "INDEXED" or (d.indexed_chunks or 0) == 0]
+    if unindexed:
+        try:
+            await tender_service.process_tender_documents(tender_id=tender.id)
+            tender = await tender_service.get_tender(tender_id)
+        except Exception as e:
+            logger.warning(f"Failed to auto-process unindexed documents: {e}")
+
+    # Fetch document chunks for this tender
+    chunk_stmt = (
+        select(DocumentChunkModel)
+        .where(DocumentChunkModel.tender_id == tender.id)
+        .order_by(DocumentChunkModel.page_number, DocumentChunkModel.chunk_index)
+        .limit(100)
+    )
+    chunk_res = await session.execute(chunk_stmt)
+    chunks = list(chunk_res.scalars().all())
+
+    doc_infos = [
+        ExtractedDocumentInfo(
+            document_id=d.id,
+            original_filename=d.original_filename,
+            document_category=d.document_category,
+            processing_status=d.processing_status,
+            total_pages=d.total_pages,
+            indexed_chunks=d.indexed_chunks or 0,
+            extraction_metadata=d.extraction_metadata,
+        )
+        for d in tender.documents
+    ]
+
+    chunk_infos = [
+        ExtractedChunkInfo(
+            chunk_id=str(c.id),
+            document_id=c.document_id,
+            source_filename=c.source_filename,
+            page_number=c.page_number,
+            chunk_index=c.chunk_index,
+            chunk_text=c.chunk_text,
+            extraction_method=c.extraction_method or "pymupdf_direct",
+        )
+        for c in chunks
+    ]
+
+    return TenderExtractedKnowledgeResponse(
+        tender_id=tender.id,
+        tender_reference=tender.tender_reference,
+        title=tender.title,
+        status=tender.processing_status,
+        total_documents=len(tender.documents),
+        total_chunks=len(chunks),
+        documents=doc_infos,
+        chunks=chunk_infos,
     )
 
 

@@ -4,6 +4,7 @@ import {
   IngestionRunResponse,
   IngestionStatusOverviewResponse,
   ProposedRequirementsBundle,
+  TenderExtractedKnowledgeResponse,
   TenderListResponse,
   TenderQAResponse,
   TenderResponse,
@@ -72,6 +73,11 @@ export const tendersApi = {
     const res = await apiClient.post<TenderQAResponse>(`/tenders/${tenderId}/qa`, {
       question,
     });
+    return res.data;
+  },
+
+  getExtractedKnowledge: async (tenderId: string): Promise<TenderExtractedKnowledgeResponse> => {
+    const res = await apiClient.get<TenderExtractedKnowledgeResponse>(`/tenders/${tenderId}/extracted-knowledge`);
     return res.data;
   },
 

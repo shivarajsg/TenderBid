@@ -163,3 +163,35 @@ export interface IngestionStatusOverviewResponse {
   portals: IngestionPortalStatus[];
   latest_runs: IngestionRunResponse[];
 }
+
+
+export interface ExtractedChunkInfo {
+  chunk_id: string;
+  document_id: string;
+  source_filename: string;
+  page_number: number;
+  chunk_index: number;
+  chunk_text: string;
+  extraction_method: string;
+}
+
+export interface ExtractedDocumentInfo {
+  document_id: string;
+  original_filename: string;
+  document_category: string;
+  processing_status: string;
+  total_pages?: number | null;
+  indexed_chunks: number;
+  extraction_metadata?: Record<string, unknown> | null;
+}
+
+export interface TenderExtractedKnowledgeResponse {
+  tender_id: string;
+  tender_reference: string;
+  title: string;
+  status: string;
+  total_documents: number;
+  total_chunks: number;
+  documents: ExtractedDocumentInfo[];
+  chunks: ExtractedChunkInfo[];
+}

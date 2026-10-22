@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { tendersApi } from '../../api/tendersApi';
 import { applicationsApi } from '../../api/applicationsApi';
-import { TenderResponse } from '../../types/tender';
+import { TenderResponse, TenderExtractedKnowledgeResponse } from '../../types/tender';
 import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorAlert } from '../../components/common/ErrorAlert';
@@ -28,6 +28,9 @@ import {
   Info,
   X,
   Globe,
+  Sparkles,
+  Database,
+  Layers,
 } from 'lucide-react';
 
 export const TenderDetailPage: React.FC = () => {
@@ -47,6 +50,21 @@ export const TenderDetailPage: React.FC = () => {
   const [viewingBlobUrl, setViewingBlobUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [extractedKnowledge, setExtractedKnowledge] = useState<TenderExtractedKnowledgeResponse | null>(null);
+  const [isLoadingKnowledge, setIsLoadingKnowledge] = useState(false);
+  const [showKnowledgeChunks, setShowKnowledgeChunks] = useState(false);
+
+  const fetchKnowledge = async (id: string) => {
+    setIsLoadingKnowledge(true);
+    try {
+      const data = await tendersApi.getExtractedKnowledge(id);
+      setExtractedKnowledge(data);
+    } catch {
+      // Non-blocking
+    } finally {
+      setIsLoadingKnowledge(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchTender() {
@@ -56,6 +74,7 @@ export const TenderDetailPage: React.FC = () => {
       try {
         const data = await tendersApi.getTender(tenderId);
         setTender(data);
+        fetchKnowledge(tenderId);
       } catch (err: unknown) {
         setError(getErrorMessage(err));
       } finally {
@@ -94,6 +113,7 @@ export const TenderDetailPage: React.FC = () => {
       // Refresh tender record to reflect any newly ingested/indexed attachments
       const updated = await tendersApi.getTender(tender.id);
       setTender(updated);
+      fetchKnowledge(tender.id);
 
       if (res.status === 'COMPLETED' && res.documents_retrieved > 0) {
         setFetchFeedback({
@@ -312,6 +332,100 @@ export const TenderDetailPage: React.FC = () => {
 
       {/* Grounded Tender Q&A (Phase 9) */}
       <TenderQAPanel tenderId={tender.id} tenderTitle={tender.title} />
+
+      {/* Extracted Document Knowledge in Backend (AI Knowledge Base) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Extracted Document Knowledge in Backend
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                  AI Context Verified
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                The authoritative text and vector chunks extracted from downloaded tender PDFs that the AI reads to answer questions.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isLoadingKnowledge}
+              icon={<RefreshCw className={`w-3.5 h-3.5 ${isLoadingKnowledge ? 'animate-spin text-blue-600' : ''}`} />}
+              onClick={() => fetchKnowledge(tender.id)}
+            >
+              {isLoadingKnowledge ? 'Refreshing...' : 'Refresh Extracted Knowledge'}
+            </Button>
+            {extractedKnowledge && extractedKnowledge.chunks.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Layers className="w-3.5 h-3.5 text-indigo-600" />}
+                onClick={() => setShowKnowledgeChunks(!showKnowledgeChunks)}
+              >
+                {showKnowledgeChunks ? 'Hide Extracted Text' : `View Extracted Text (${extractedKnowledge.chunks.length} chunks)`}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {extractedKnowledge && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="text-slate-400 font-medium">Authoritative Documents</span>
+              <p className="text-base font-bold text-slate-900 mt-0.5">{extractedKnowledge.total_documents} File(s)</p>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="text-slate-400 font-medium">Total Vector Chunks</span>
+              <p className="text-base font-bold text-slate-900 mt-0.5">{extractedKnowledge.total_chunks} Chunks Indexed</p>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/60">
+              <span className="text-slate-400 font-medium">Extraction Pipeline</span>
+              <p className="text-base font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                PyMuPDF Direct + OCR Verified
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Expandable Extracted Chunks Viewer */}
+        {showKnowledgeChunks && extractedKnowledge && extractedKnowledge.chunks.length > 0 && (
+          <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+            <div className="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-700">
+              <span>Authoritative Document Text Seen by AI ({extractedKnowledge.chunks.length} Chunks)</span>
+              <span className="text-[11px] text-slate-500 font-mono">Page Scoped • RRF Ranked</span>
+            </div>
+            <div className="max-h-96 overflow-y-auto p-4 space-y-3">
+              {extractedKnowledge.chunks.map((c, idx) => (
+                <div key={idx} className="p-3 bg-white rounded-lg border border-slate-200 text-xs shadow-2xs">
+                  <div className="flex items-center justify-between text-slate-500 mb-1.5 pb-1 border-b border-slate-100 font-medium">
+                    <span className="text-blue-700 font-semibold flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5" />
+                      {c.source_filename}
+                    </span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[11px]">
+                      Page {c.page_number} • Chunk #{c.chunk_index}
+                    </span>
+                  </div>
+                  <p className="text-slate-800 leading-relaxed font-sans whitespace-pre-wrap text-[12px]">
+                    {c.chunk_text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Structured Requirements Breakdown */}
       {tender.structured_requirements && (
