@@ -21,6 +21,7 @@ import {
   Calendar,
   Layers,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 
 export const ComplianceAnalysisPage: React.FC = () => {
@@ -36,8 +37,24 @@ export const ComplianceAnalysisPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [downloadingDoc, setDownloadingDoc] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!selectedTender) return;
+    setDownloadingDoc(true);
+    setError(null);
+    try {
+      await tendersApi.fetchTenderDocuments(selectedTender.id);
+      const updated = await tendersApi.getTender(selectedTender.id);
+      setTenders((prev) => prev.map((t) => (t.id === selectedTender.id ? updated : t)));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setDownloadingDoc(false);
+    }
+  };
 
   useEffect(() => {
     async function loadPrerequisites() {
@@ -229,14 +246,24 @@ export const ComplianceAnalysisPage: React.FC = () => {
                     Attached Documents: {indexedDocsCount} files indexed
                   </h3>
                   <p className="text-xs text-amber-900 mt-1 leading-relaxed">
-                    <strong>Full compliance analysis is unavailable because no usable tender documents have been indexed.</strong> Upload or process the tender documents to evaluate the actual eligibility conditions.
+                    <strong>Full compliance analysis is unavailable because no usable tender documents have been indexed.</strong> Compliance evaluation cannot be completed because no usable tender document has been downloaded and indexed for this bid. Retry document retrieval, open the official source, or upload the tender file manually.
                   </p>
                   <p className="text-[11px] text-amber-700 mt-1">
                     Evaluating this tender without indexed documents will only check pre-configured structured RFP parameters and will report documented scope limitations.
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <Button
+                  size="sm"
+                  type="button"
+                  isLoading={downloadingDoc}
+                  disabled={downloadingDoc}
+                  onClick={handleDownloadPdf}
+                  icon={<Download className="w-4 h-4" />}
+                >
+                  Download Tender PDF Now
+                </Button>
                 <Link to={`/tenders/${selectedTender.id}`}>
                   <Button size="sm" variant="outline" icon={<FileText className="w-4 h-4" />}>
                     View Tender Notice & Upload / Inspect Documents

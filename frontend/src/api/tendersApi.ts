@@ -28,6 +28,13 @@ export const tendersApi = {
     return res.data;
   },
 
+  refreshTenders: async (params?: { source_portal?: string; limit?: number; force?: boolean }): Promise<IngestionRunResponse> => {
+    const res = await apiClient.post<IngestionRunResponse>('/tenders/refresh', null, {
+      params,
+    });
+    return res.data;
+  },
+
   getTender: async (tenderId: string): Promise<TenderResponse> => {
     const res = await apiClient.get<TenderResponse>(`/tenders/${tenderId}`);
     return res.data;

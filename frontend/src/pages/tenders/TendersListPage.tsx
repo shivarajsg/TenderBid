@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { tendersApi } from '../../api/tendersApi';
 import { TenderResponse } from '../../types/tender';
 import { Input } from '../../components/common/Input';
@@ -22,19 +22,30 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  AlertCircle,
+  Package,
+  Calendar,
 } from 'lucide-react';
 
 export const TendersListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [tenders, setTenders] = useState<TenderResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [downloadingTenderId, setDownloadingTenderId] = useState<string | null>(null);
+  const [unindexedModalTender, setUnindexedModalTender] = useState<TenderResponse | null>(null);
   const [search, setSearch] = useState('');
   const [sector, setSector] = useState('');
   const [selectedPortal, setSelectedPortal] = useState<string>('ALL');
   const [error, setError] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -79,9 +90,71 @@ export const TendersListPage: React.FC = () => {
     fetchTenders(1, pageSize, search, sector, selectedPortal);
   };
 
-  const handleManualRefresh = () => {
+  const handleRefreshTenderList = async () => {
     setRefreshing(true);
-    fetchTenders(page, pageSize, search, sector, selectedPortal);
+    setError(null);
+    setSuccessNotice(null);
+    try {
+      const run = await tendersApi.refreshTenders({
+        source_portal: selectedPortal !== 'ALL' ? selectedPortal : undefined,
+        limit: 20,
+      });
+      setSuccessNotice(
+        `Live tender refresh completed (${run.source_portal}): ${run.tenders_found} discovered, ${run.tenders_ingested} new ingested, ${run.tenders_updated} updated in database.`
+      );
+      setPage(1);
+      await fetchTenders(1, pageSize, search, sector, selectedPortal);
+    } catch (err: unknown) {
+      setError(`Failed to sync live tender feeds: ${getErrorMessage(err)}`);
+      await fetchTenders(page, pageSize, search, sector, selectedPortal);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDownloadTenderPdf = async (tender: TenderResponse) => {
+    setDownloadingTenderId(tender.id);
+    setError(null);
+    setSuccessNotice(null);
+    try {
+      const res = await tendersApi.fetchTenderDocuments(tender.id);
+      const updatedTender = await tendersApi.getTender(tender.id);
+      setTenders((prev) =>
+        prev.map((t) => (t.id === tender.id ? updatedTender : t))
+      );
+
+      if (res.status === 'COMPLETED') {
+        const indexedCount = (updatedTender.documents || []).filter(
+          (d) => d.processing_status === 'INDEXED'
+        ).length;
+        setSuccessNotice(
+          `Document retrieved & indexed for [${tender.tender_reference}]: ${indexedCount} document(s) verified and ready for compliance evaluation.`
+        );
+      } else if (res.status === 'HTML_PAGE_ONLY') {
+        setError(
+          `Notice for [${tender.tender_reference}]: ${res.message || 'Source is an official portal notice page. Direct PDF download is not available.'}`
+        );
+      } else {
+        setError(
+          `Document notice for [${tender.tender_reference}]: ${res.message || res.status}`
+        );
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setDownloadingTenderId(null);
+    }
+  };
+
+  const handleEvaluateCompliance = (tender: TenderResponse) => {
+    const indexedDocs = (tender.documents || []).filter(
+      (d) => d.processing_status === 'INDEXED'
+    );
+    if (indexedDocs.length === 0) {
+      setUnindexedModalTender(tender);
+    } else {
+      navigate(`/compliance/analyze?tender_id=${tender.id}`);
+    }
   };
 
   const handlePageChange = (newPage: number) => {
@@ -195,14 +268,29 @@ export const TendersListPage: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleManualRefresh}
+            onClick={handleRefreshTenderList}
             disabled={loading || refreshing}
             icon={<RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />}
           >
-            {refreshing ? 'Syncing...' : 'Refresh Feed'}
+            {refreshing ? 'Syncing...' : 'Refresh Tender List'}
           </Button>
         </div>
       </div>
+
+      {successNotice && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successNotice}</span>
+          </div>
+          <button
+            onClick={() => setSuccessNotice(null)}
+            className="text-emerald-600 hover:text-emerald-900 ml-2 font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
@@ -294,6 +382,11 @@ export const TendersListPage: React.FC = () => {
             const isClosingSoon =
               deadline.getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 &&
               deadline.getTime() > Date.now();
+            const indexedDocs = (tender.documents || []).filter((d) => d.processing_status === 'INDEXED');
+            const isDownloading = downloadingTenderId === tender.id;
+            const isHtmlPortal = tender.ingestion_metadata?.document_source_status === 'HTML_PORTAL_PAGE';
+            const quantity = tender.ingestion_metadata?.gem_quantity;
+            const pubDate = tender.publication_date ? new Date(tender.publication_date) : null;
 
             return (
               <div
@@ -303,11 +396,35 @@ export const TendersListPage: React.FC = () => {
               >
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
                         {tender.tender_reference}
                       </span>
                       {renderPortalBadge(tender.source_portal)}
+                      {indexedDocs.length > 0 ? (
+                        <span
+                          data-testid={`badge-indexed-${tender.tender_reference}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
+                        >
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Indexed & Ready ({indexedDocs.length} Doc · {indexedDocs[0].total_pages || 1}p · {indexedDocs[0].indexed_chunks || 1} chunks)
+                        </span>
+                      ) : isDownloading ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 animate-pulse">
+                          <RefreshCw className="w-3 h-3 text-blue-600 animate-spin" />
+                          Downloading & Indexing...
+                        </span>
+                      ) : isHtmlPortal ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          <AlertCircle className="w-3 h-3 text-amber-600" />
+                          Portal Notice Only
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                          <FileText className="w-3 h-3 text-slate-400" />
+                          Not Downloaded
+                        </span>
+                      )}
                       {Boolean(tender.ingestion_metadata?.is_fixture) && (
                         <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                           Schema Fixture
@@ -353,6 +470,28 @@ export const TendersListPage: React.FC = () => {
                       </p>
                     </div>
 
+                    {Boolean(quantity) && (
+                      <div>
+                        <p className="text-slate-400 flex items-center gap-1">
+                          <Package className="w-3.5 h-3.5" />
+                          Quantity
+                        </p>
+                        <p className="font-semibold text-slate-800 mt-0.5">{String(quantity)}</p>
+                      </div>
+                    )}
+
+                    {pubDate && (
+                      <div>
+                        <p className="text-slate-400 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          Published
+                        </p>
+                        <p className="font-semibold text-slate-800 mt-0.5">
+                          {pubDate.toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="col-span-2 flex items-center justify-between text-slate-600 mt-1 pt-1">
                       <div className="flex items-center gap-1.5">
                         <Clock
@@ -391,21 +530,97 @@ export const TendersListPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <Link to={`/tenders/${tender.id}`}>
                     <Button variant="outline" size="sm">
                       Notice Details
                     </Button>
                   </Link>
-                  <Link to={`/compliance/analyze?tender_id=${tender.id}`}>
-                    <Button size="sm" icon={<FileCheck2 className="w-4 h-4" />}>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isDownloading}
+                      isLoading={isDownloading}
+                      onClick={() => handleDownloadTenderPdf(tender)}
+                      icon={<Download className="w-3.5 h-3.5" />}
+                    >
+                      {indexedDocs.length > 0 ? 'Re-download PDF' : 'Download Tender PDF'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleEvaluateCompliance(tender)}
+                      icon={<FileCheck2 className="w-4 h-4" />}
+                    >
                       Evaluate Compliance
                     </Button>
-                  </Link>
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Guard Modal: When tender has 0 usable documents indexed */}
+      {unindexedModalTender && (
+        <div
+          data-testid="unindexed-document-guard-modal"
+          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-100 text-amber-700 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Document Required for Compliance Evaluation
+                </h3>
+                <p className="text-xs font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded mt-1 inline-block">
+                  {unindexedModalTender.tender_reference}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium leading-relaxed">
+              Compliance evaluation cannot be completed because no usable tender document has been downloaded and indexed for this bid. Retry document retrieval, open the official source, or upload the tender file manually.
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setUnindexedModalTender(null)}
+              >
+                Cancel
+              </Button>
+              {unindexedModalTender.official_portal_url && (
+                <a
+                  href={unindexedModalTender.official_portal_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="outline" size="sm" icon={<ExternalLink className="w-3.5 h-3.5" />}>
+                    Open Official Source
+                  </Button>
+                </a>
+              )}
+              <Button
+                size="sm"
+                isLoading={downloadingTenderId === unindexedModalTender.id}
+                disabled={downloadingTenderId === unindexedModalTender.id}
+                onClick={async () => {
+                  const target = unindexedModalTender;
+                  await handleDownloadTenderPdf(target);
+                  setUnindexedModalTender(null);
+                }}
+                icon={<Download className="w-3.5 h-3.5" />}
+              >
+                Download Tender PDF Now
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

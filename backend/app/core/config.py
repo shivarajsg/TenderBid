@@ -40,6 +40,10 @@ class Settings(BaseSettings):
 
     # Local Protected File Storage
     UPLOAD_DIR: str = Field(default="./uploads")
+    TENDER_DOWNLOAD_DIR: str = Field(
+        default="../downloads",
+        description="Local directory for saving downloaded public tender documents and attachments",
+    )
     MAX_UPLOAD_SIZE_MB: int = Field(default=25)
 
     # Document Processing & OCR

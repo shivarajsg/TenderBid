@@ -40,6 +40,8 @@ yarn-error.log*
 # Database, ChromaDB & Upload Storage
 uploads/
 backend/uploads/
+downloads/
+backend/downloads/
 data/
 backend/data/
 *.sqlite

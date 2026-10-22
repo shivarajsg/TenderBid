@@ -11,6 +11,8 @@ from app.db.repositories.companies import CompanyRepository
 from app.db.session import get_db
 from app.models.compliance_finding import ComplianceFinding
 from app.models.compliance_report import ComplianceReport
+from app.models.document import Document
+from app.models.tender import Tender
 from app.models.user import User
 from app.schemas.compliance import (
     ComplianceAnalyzeRequest,
@@ -54,6 +56,29 @@ async def analyze_tender_compliance(
     reconciliation guard enforcement, and optional Gemini analysis.
     """
     company_id = await resolve_user_company_id(current_user, session)
+
+    # Invariant: Government portal tenders require at least one indexed tender document
+    td_stmt = select(Document).where(
+        Document.tender_id == payload.tender_id,
+        Document.processing_status == "INDEXED",
+    )
+    td_res = await session.execute(td_stmt)
+    indexed_tender_docs = list(td_res.scalars().all())
+
+    t_stmt = select(Tender).where(Tender.id == payload.tender_id)
+    t_res = await session.execute(t_stmt)
+    target_tender = t_res.scalar_one_or_none()
+
+    if target_tender and target_tender.source_portal in ("GEM", "CPPP", "APIFY", "TENDERKART") and not indexed_tender_docs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Compliance evaluation cannot be completed because no usable tender document "
+                "has been downloaded and indexed for this bid. Retry document retrieval, "
+                "open the official source, or upload the tender file manually."
+            ),
+        )
+
     orchestrator = ComplianceWorkflowOrchestrator(session)
 
     try:

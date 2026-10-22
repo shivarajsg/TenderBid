@@ -29,6 +29,7 @@ import hashlib
 import io
 import ipaddress
 import logging
+import re
 import socket
 from typing import Any, Dict, List, Optional, Set, Tuple
 import urllib.parse
@@ -62,6 +63,16 @@ DEFAULT_ALLOWED_DOMAINS = [
     "apify.com",
     ".apify.com",
 ]
+
+
+def sanitize_fs_name(name: str, max_length: int = 100) -> str:
+    """Sanitize string for Windows & POSIX safe path usage."""
+    if not name:
+        return "document"
+    # Replace illegal filesystem characters: \ / : * ? " < > | \0-\x1f
+    cleaned = re.sub(r'[\\/*?:"<>|\x00-\x1f]', '_', str(name))
+    cleaned = re.sub(r'[\s_]+', '_', cleaned).strip(' ._')
+    return cleaned[:max_length] if cleaned else "document"
 
 
 @dataclass
@@ -293,50 +304,9 @@ class TenderDocumentRetrievalService:
 
             content_type = response.headers.get("content-type", "").lower()
 
-            # Read initial chunk to inspect magic bytes
-            initial_chunk = b""
-            async for chunk in response.aiter_bytes():
-                initial_chunk += chunk
-                if len(initial_chunk) >= 2048:
-                    break
-
-            if not initial_chunk:
-                return DocumentRetrievalResult(
-                    url=url,
-                    classification="UNAVAILABLE",
-                    status="NOT_FOUND",
-                    error_details="Remote server returned empty 0-byte response.",
-                    message="No data returned from tender document source.",
-                )
-
-            # Examine file signature: PDF magic bytes (%PDF)
-            if not initial_chunk.startswith(b"%PDF"):
-                lower_preview = initial_chunk[:1024].lower()
-                if (
-                    b"<html" in lower_preview
-                    or b"<!doctype html" in lower_preview
-                    or "text/html" in content_type
-                ):
-                    return DocumentRetrievalResult(
-                        url=url,
-                        classification="HTML_PORTAL_PAGE",
-                        status="HTML_PAGE",
-                        message="URL points to an interactive official web portal page rather than a direct PDF file.",
-                        error_details="Source is an HTML bid notice page. Direct PDF download is not available at this link.",
-                    )
-                else:
-                    return DocumentRetrievalResult(
-                        url=url,
-                        classification="NON_PDF_RESOURCE",
-                        status="ERROR",
-                        error_details=f"Remote file signature is not PDF (Content-Type: {content_type}).",
-                        message="Remote resource is not a valid PDF document.",
-                    )
-
-            # Stream remaining bytes up to max_bytes
             buffer = io.BytesIO()
-            buffer.write(initial_chunk)
-            total_size = len(initial_chunk)
+            total_size = 0
+            initial_checked = False
 
             async for chunk in response.aiter_bytes():
                 total_size += len(chunk)
@@ -349,8 +319,66 @@ class TenderDocumentRetrievalService:
                         message="Tender document is too large to download automatically.",
                     )
                 buffer.write(chunk)
+                if not initial_checked and buffer.tell() >= 2048:
+                    initial_checked = True
+                    preview = buffer.getvalue()
+                    if not preview.startswith(b"%PDF"):
+                        lower_preview = preview[:1024].lower()
+                        if (
+                            b"<html" in lower_preview
+                            or b"<!doctype html" in lower_preview
+                            or "text/html" in content_type
+                        ):
+                            return DocumentRetrievalResult(
+                                url=url,
+                                classification="HTML_PORTAL_PAGE",
+                                status="HTML_PAGE",
+                                message="URL points to an interactive official web portal page rather than a direct PDF file.",
+                                error_details="Source is an HTML bid notice page. Direct PDF download is not available at this link.",
+                            )
+                        else:
+                            return DocumentRetrievalResult(
+                                url=url,
+                                classification="NON_PDF_RESOURCE",
+                                status="ERROR",
+                                error_details=f"Remote file signature is not PDF (Content-Type: {content_type}).",
+                                message="Remote resource is not a valid PDF document.",
+                            )
+
+            if total_size == 0:
+                return DocumentRetrievalResult(
+                    url=url,
+                    classification="UNAVAILABLE",
+                    status="NOT_FOUND",
+                    error_details="Remote server returned empty 0-byte response.",
+                    message="No data returned from tender document source.",
+                )
 
             pdf_bytes = buffer.getvalue()
+
+            if not initial_checked:
+                if not pdf_bytes.startswith(b"%PDF"):
+                    lower_preview = pdf_bytes[:1024].lower()
+                    if (
+                        b"<html" in lower_preview
+                        or b"<!doctype html" in lower_preview
+                        or "text/html" in content_type
+                    ):
+                        return DocumentRetrievalResult(
+                            url=url,
+                            classification="HTML_PORTAL_PAGE",
+                            status="HTML_PAGE",
+                            message="URL points to an interactive official web portal page rather than a direct PDF file.",
+                            error_details="Source is an HTML bid notice page. Direct PDF download is not available at this link.",
+                        )
+                    else:
+                        return DocumentRetrievalResult(
+                            url=url,
+                            classification="NON_PDF_RESOURCE",
+                            status="ERROR",
+                            error_details=f"Remote file signature is not PDF (Content-Type: {content_type}).",
+                            message="Remote resource is not a valid PDF document.",
+                        )
 
             # Structural PDF validation using PyMuPDF
             try:
@@ -476,13 +504,31 @@ class TenderDocumentRetrievalService:
                         overall_message = f"Document '{existing_doc.original_filename}' is already verified and indexed."
                         continue
 
-                    # Save verified PDF stream to vault storage
+                    # Determine sanitized directory and filename for this tender
+                    raw_tender_ref = tender.tender_reference or tender.source_tender_id or str(tender.id)
+                    tender_dir_name = sanitize_fs_name(raw_tender_ref, max_length=60)
+                    raw_title = tender.title or "Tender_Document"
+                    sanitized_title = sanitize_fs_name(raw_title, max_length=90)
+                    main_filename = f"{sanitized_title}.pdf"
+
+                    # Save verified PDF into downloads/<sanitized_tender_id>/<sanitized_bid_title>.pdf
                     doc_id = uuid.uuid4()
-                    rel_storage_path = f"tenders/{tender.id}/{doc_id}.pdf"
-                    saved_path, file_size, sha256_hash = await self.storage.save_pdf_stream(
-                        file_obj=io.BytesIO(retrieval.content),
-                        target_relative_path=rel_storage_path,
+                    saved_path, abs_path, file_size, sha256_hash = await self.storage.save_tender_download_file(
+                        file_bytes=retrieval.content,
+                        tender_dir_name=tender_dir_name,
+                        filename=main_filename,
+                        verify_pdf_header=True,
                     )
+
+                    # Preserve specific filename for non-generic non-GeM sources if available
+                    suggested = retrieval.suggested_filename or ""
+                    is_generic_name = (
+                        not suggested
+                        or suggested.startswith("tender_document_")
+                        or suggested.lower().startswith(("showbid", "showra", "download", "index"))
+                        or tender.source_portal == "GEM"
+                    )
+                    display_filename = main_filename if is_generic_name else suggested
 
                     new_doc = Document(
                         id=doc_id,
@@ -491,7 +537,7 @@ class TenderDocumentRetrievalService:
                         entity_type="TENDER",
                         uploaded_by=user.id if user else None,
                         document_category="TENDER_NOTICE",
-                        original_filename=retrieval.suggested_filename or "tender_notice.pdf",
+                        original_filename=display_filename,
                         storage_path=saved_path,
                         mime_type="application/pdf",
                         file_size_bytes=file_size,
@@ -512,6 +558,68 @@ class TenderDocumentRetrievalService:
                     downloaded_docs.append(new_doc)
                     any_pdf_success = True
                     overall_message = f"Successfully downloaded, verified, and indexed '{new_doc.original_filename}'."
+
+                    # Discover and download embedded attachments (specifications, BOQs, ATCs)
+                    discovered_attachments = self._discover_pdf_attachments(
+                        retrieval.content, allow_test_hosts=allow_test_hosts
+                    )
+                    for att_idx, (att_url, att_category) in enumerate(discovered_attachments[:5]):
+                        try:
+                            att_res = await self.classify_and_download(
+                                att_url, allow_test_hosts=allow_test_hosts
+                            )
+                            if att_res.content and len(att_res.content) > 0:
+                                existing_att = next(
+                                    (d for d in tender.documents if d.sha256_hash == att_res.sha256_hash),
+                                    None,
+                                )
+                                if existing_att:
+                                    continue
+
+                                att_id = uuid.uuid4()
+                                is_pdf = att_res.classification == "PDF_DOCUMENT" or att_res.content.startswith(b"%PDF")
+                                att_ext = "pdf" if is_pdf else (att_url.split("?")[0].split(".")[-1] or "bin")[:5]
+                                att_fn = f"{sanitized_title} - {att_category}_{att_idx + 1}.{att_ext}"
+
+                                att_saved_path, _, att_size, att_sha = await self.storage.save_tender_download_file(
+                                    file_bytes=att_res.content,
+                                    tender_dir_name=tender_dir_name,
+                                    filename=att_fn,
+                                    verify_pdf_header=is_pdf,
+                                )
+
+                                att_doc = Document(
+                                    id=att_id,
+                                    tender_id=tender.id,
+                                    company_id=None,
+                                    entity_type="TENDER",
+                                    uploaded_by=user.id if user else None,
+                                    document_category="TENDER_SPECIFICATION" if att_category in ("Specification", "ATC") else "TENDER_NOTICE",
+                                    original_filename=att_fn,
+                                    storage_path=att_saved_path,
+                                    mime_type="application/pdf" if is_pdf else (
+                                        "text/csv" if att_ext == "csv" else (
+                                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if att_ext == "xlsx" else "application/octet-stream"
+                                        )
+                                    ),
+                                    file_size_bytes=att_size,
+                                    sha256_hash=att_sha,
+                                    processing_status="PENDING",
+                                    verification_status="UNVERIFIED",
+                                )
+                                self.session.add(att_doc)
+                                await self.session.commit()
+                                await self.session.refresh(att_doc)
+
+                                if is_pdf:
+                                    await self.tender_service.process_tender_documents(
+                                        tender_id=tender.id,
+                                        document_id=att_doc.id,
+                                    )
+                                    await self.session.refresh(att_doc)
+                                downloaded_docs.append(att_doc)
+                        except Exception as att_err:
+                            logger.warning("Failed to fetch discovered attachment %s: %s", att_url, att_err)
 
                 elif retrieval.classification == "HTML_PORTAL_PAGE":
                     # Store notice in tender ingestion metadata
@@ -567,6 +675,43 @@ class TenderDocumentRetrievalService:
         finally:
             self._active_fetches.discard(tender_id)
 
+    def _discover_pdf_attachments(
+        self, pdf_bytes: bytes, allow_test_hosts: bool = False
+    ) -> List[Tuple[str, str]]:
+        """
+        Scan PDF pages for embedded links pointing to technical specifications,
+        BOQs, Buyer ATC, or other attachments on allowed official domains.
+        Returns: List of (url, suggested_category_label)
+        """
+        discovered: List[Tuple[str, str]] = []
+        seen_urls: Set[str] = set()
+        try:
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            for page in doc:
+                for link in page.get_links():
+                    uri = (link.get("uri") or "").strip()
+                    if not uri or not uri.startswith("http") or uri in seen_urls:
+                        continue
+                    seen_urls.add(uri)
+
+                    is_safe, _ = self.is_safe_url(uri, allow_test_hosts=allow_test_hosts)
+                    if not is_safe:
+                        continue
+
+                    uri_lower = uri.lower()
+                    if "tech_spec" in uri_lower or "specification" in uri_lower:
+                        discovered.append((uri, "Specification"))
+                    elif "boq" in uri_lower or uri_lower.endswith((".xlsx", ".csv", ".xls")):
+                        discovered.append((uri, "BOQ"))
+                    elif "atc" in uri_lower or "buyer" in uri_lower or "sla" in uri_lower:
+                        discovered.append((uri, "ATC"))
+                    elif uri_lower.endswith(".pdf"):
+                        discovered.append((uri, "Specification"))
+            doc.close()
+        except Exception as e:
+            logger.warning("Error scanning PDF for embedded links: %s", e)
+        return discovered
+
     def _extract_candidate_urls(self, tender: Tender) -> List[str]:
         """Collect potential document URLs from tender fields and ingestion payload."""
         urls: List[str] = []
@@ -580,7 +725,20 @@ class TenderDocumentRetrievalService:
             if val and isinstance(val, str) and val.startswith("http"):
                 urls.append(val.strip())
 
-        # 2. List of document URLs
+        # 2. GeM specific direct document endpoints
+        if tender.source_portal == "GEM":
+            gem_bid_id = None
+            if tender.ingestion_metadata and isinstance(tender.ingestion_metadata, dict):
+                gem_bid_id = tender.ingestion_metadata.get("gem_bid_id")
+            if not gem_bid_id:
+                gem_bid_id = tender.source_tender_id
+            if gem_bid_id and str(gem_bid_id).strip():
+                clean_gid = str(gem_bid_id).strip()
+                urls.append(f"https://bidplus.gem.gov.in/showbidDocument/{clean_gid}")
+                urls.append(f"https://bidplus.gem.gov.in/showradocumentPdf/{clean_gid}")
+                urls.append(f"https://bidplus.gem.gov.in/showdirectradocumentPdf/{clean_gid}")
+
+        # 3. List of document URLs
         for key in ("documentUrls", "document_urls", "attachments", "files"):
             val = raw_payload.get(key)
             if isinstance(val, list):
@@ -590,12 +748,12 @@ class TenderDocumentRetrievalService:
                     elif isinstance(item, dict) and item.get("url") and str(item["url"]).startswith("http"):
                         urls.append(str(item["url"]).strip())
 
-        # 3. tenderUrl in raw payload
+        # 4. tenderUrl in raw payload
         tender_url = raw_payload.get("tenderUrl")
         if tender_url and isinstance(tender_url, str) and tender_url.startswith("http"):
             urls.append(tender_url.strip())
 
-        # 4. Official portal URL on tender model
+        # 5. Official portal URL on tender model
         if tender.official_portal_url and tender.official_portal_url.startswith("http"):
             urls.append(tender.official_portal_url.strip())
 

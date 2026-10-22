@@ -224,4 +224,185 @@ describe('TendersListPage Component', () => {
       expect(screen.getByTestId('btn-prev-page')).not.toBeDisabled();
     });
   });
+
+  it('triggers live refresh when Refresh Tender List button is clicked', async () => {
+    vi.mocked(tendersApi.listTenders).mockResolvedValue({
+      items: [
+        {
+          id: 'tender-live-1',
+          tender_reference: 'GEM/2026/B/7996346',
+          title: 'All In One PC Workstation',
+          issuing_authority: 'Ministry of Defence',
+          sector: 'Public Procurement',
+          msme_emd_exemption: true,
+          submission_deadline: '2026-12-31T23:59:59Z',
+          processing_status: 'PENDING',
+          documents: [],
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+      skip: 0,
+      limit: 12,
+    });
+
+    vi.mocked(tendersApi.refreshTenders).mockResolvedValue({
+      id: 'run-1',
+      source_portal: 'ALL',
+      status: 'SUCCESS',
+      tenders_found: 5,
+      tenders_ingested: 3,
+      tenders_updated: 2,
+      tenders_skipped: 0,
+      started_at: '2026-10-22T20:00:00Z',
+      completed_at: '2026-10-22T20:00:02Z',
+    });
+
+    render(
+      <MemoryRouter>
+        <TendersListPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Refresh Tender List')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Refresh Tender List'));
+
+    await waitFor(() => {
+      expect(tendersApi.refreshTenders).toHaveBeenCalled();
+      expect(screen.getByText(/Live tender refresh completed/i)).toBeInTheDocument();
+    });
+  });
+
+  it('triggers per-tender PDF download and updates card state', async () => {
+    const tenderObj = {
+      id: 'tender-download-1',
+      tender_reference: 'GEM/2026/B/8098475',
+      title: 'Industrial Generator Systems',
+      issuing_authority: 'Central Electricity Authority',
+      sector: 'Power',
+      msme_emd_exemption: true,
+      submission_deadline: '2026-12-31T23:59:59Z',
+      processing_status: 'PENDING',
+      documents: [],
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+
+    vi.mocked(tendersApi.listTenders).mockResolvedValue({
+      items: [tenderObj],
+      total: 1,
+      skip: 0,
+      limit: 12,
+    });
+
+    vi.mocked(tendersApi.fetchTenderDocuments).mockResolvedValue({
+      tender_id: tenderObj.id,
+      status: 'COMPLETED',
+      url_classification: 'PDF_DOCUMENT',
+      documents_retrieved: 1,
+      documents_indexed: 1,
+      documents: [
+        {
+          id: 'doc-1',
+          tender_id: tenderObj.id,
+          original_filename: 'Industrial_Generator_Systems.pdf',
+          document_category: 'TENDER_NOTICE',
+          file_size_bytes: 145000,
+          mime_type: 'application/pdf',
+          sha256_hash: 'abcdef123456',
+          total_pages: 13,
+          indexed_chunks: 26,
+          processing_status: 'INDEXED',
+          created_at: '2026-10-22T20:00:00Z',
+        },
+      ],
+      message: 'Successfully downloaded and indexed tender document.',
+    });
+
+    vi.mocked(tendersApi.getTender).mockResolvedValue({
+      ...tenderObj,
+      documents: [
+        {
+          id: 'doc-1',
+          tender_id: tenderObj.id,
+          original_filename: 'Industrial_Generator_Systems.pdf',
+          document_category: 'TENDER_NOTICE',
+          file_size_bytes: 145000,
+          mime_type: 'application/pdf',
+          sha256_hash: 'abcdef123456',
+          total_pages: 13,
+          indexed_chunks: 26,
+          processing_status: 'INDEXED',
+          created_at: '2026-10-22T20:00:00Z',
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <TendersListPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Download Tender PDF')).toBeInTheDocument();
+      expect(screen.getByText('Not Downloaded')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Download Tender PDF'));
+
+    await waitFor(() => {
+      expect(tendersApi.fetchTenderDocuments).toHaveBeenCalledWith('tender-download-1');
+      expect(screen.getByText(/Indexed & Ready/i)).toBeInTheDocument();
+    });
+  });
+
+  it('guards Evaluate Compliance when tender has no indexed documents and shows mandatory alert modal', async () => {
+    vi.mocked(tendersApi.listTenders).mockResolvedValue({
+      items: [
+        {
+          id: 'tender-guard-1',
+          tender_reference: 'GEM/2026/B/892104',
+          title: 'Enterprise Workstations',
+          issuing_authority: 'IIST',
+          sector: 'IT',
+          msme_emd_exemption: true,
+          submission_deadline: '2026-12-31T23:59:59Z',
+          processing_status: 'PENDING',
+          documents: [],
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+      skip: 0,
+      limit: 12,
+    });
+
+    render(
+      <MemoryRouter>
+        <TendersListPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Evaluate Compliance')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Evaluate Compliance'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('unindexed-document-guard-modal')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Compliance evaluation cannot be completed because no usable tender document has been downloaded and indexed for this bid. Retry document retrieval, open the official source, or upload the tender file manually.'
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByText('Download Tender PDF Now')).toBeInTheDocument();
+    });
+  });
 });

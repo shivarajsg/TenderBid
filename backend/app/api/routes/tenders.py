@@ -126,6 +126,32 @@ async def get_ingestion_status(
 
 
 @router.post(
+    "/tenders/refresh",
+    response_model=IngestionRunResponse,
+    summary="Refresh live tender listing from official government portals",
+)
+async def refresh_tenders(
+    source_portal: Optional[str] = Query("ALL", description="Filter source portal: ALL, GEM, CPPP, etc."),
+    limit: Optional[int] = Query(20, ge=1, le=100, description="Max tenders to sync per portal"),
+    force: bool = Query(False, description="Force update existing records"),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch current live tender listings from public GeM / government providers,
+    normalize metadata, and update PostgreSQL without duplicating tenders or destroying existing documents.
+    Accessible to all authenticated users (MSMEs and Admins).
+    """
+    service = TenderIngestionService(session)
+    run = await service.sync_portal(
+        source_portal=source_portal or "ALL",
+        limit=limit or 20,
+        force=force,
+    )
+    return IngestionRunResponse.model_validate(run)
+
+
+@router.post(
     "/tenders/ingestion/sync",
     response_model=IngestionRunResponse,
     summary="Trigger automated government tender ingestion tick (Admin only)",
