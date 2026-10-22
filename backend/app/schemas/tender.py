@@ -204,3 +204,15 @@ class TenderExtractedKnowledgeResponse(BaseModel):
     chunks: List[ExtractedChunkInfo] = []
 
 
+
+
+class TenderImageMetaResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    tender_id: uuid.UUID
+    image_url: str
+    category_key: str
+    source: str
+    query: str
+    attribution: Optional[str] = None
+    license: Optional[str] = None

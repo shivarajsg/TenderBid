@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { tendersApi } from '../../api/tendersApi';
 import { TenderResponse } from '../../types/tender';
+import { TenderCard } from '../../components/tenders/TenderCard';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -547,203 +548,19 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {tenders.map((tender) => {
-            const deadline = new Date(tender.submission_deadline);
-            const isClosingSoon =
-              deadline.getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 &&
-              deadline.getTime() > Date.now();
-            const indexedDocs = (tender.documents || []).filter((d) => d.processing_status === 'INDEXED');
-            const isDownloading = downloadingTenderId === tender.id;
-            const isHtmlPortal = tender.ingestion_metadata?.document_source_status === 'HTML_PORTAL_PAGE';
-            const quantity = tender.ingestion_metadata?.gem_quantity;
-            const pubDate = tender.publication_date ? new Date(tender.publication_date) : null;
-
-            return (
-              <div
-                key={tender.id}
-                data-testid={`tender-card-${tender.tender_reference}`}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
-                        {tender.tender_reference}
-                      </span>
-                      {renderPortalBadge(tender.source_portal)}
-                      {indexedDocs.length > 0 ? (
-                        <span
-                          data-testid={`badge-indexed-${tender.tender_reference}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
-                        >
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          Indexed & Ready ({indexedDocs.length} Doc · {indexedDocs[0].total_pages || 1}p · {indexedDocs[0].indexed_chunks || 1} chunks)
-                        </span>
-                      ) : isDownloading ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 animate-pulse">
-                          <RefreshCw className="w-3 h-3 text-blue-600 animate-spin" />
-                          Downloading & Indexing...
-                        </span>
-                      ) : isHtmlPortal ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          <AlertCircle className="w-3 h-3 text-amber-600" />
-                          Portal Notice Only
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                          <FileText className="w-3 h-3 text-slate-400" />
-                          Not Downloaded
-                        </span>
-                      )}
-                      {Boolean(tender.ingestion_metadata?.is_fixture) && (
-                        <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                          Schema Fixture
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                      {tender.sector}
-                    </span>
-                  </div>
-
-                  <h2 className="text-base font-bold text-slate-900 mt-2 line-clamp-2">
-                    {tender.title}
-                  </h2>
-
-                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-                    <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{tender.issuing_authority}</span>
-                  </p>
-
-                  <div className="mt-5 grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 text-xs">
-                    <div>
-                      <p className="text-slate-400 flex items-center gap-1">
-                        <Coins className="w-3.5 h-3.5" />
-                        Estimated Budget
-                      </p>
-                      <p className="font-semibold text-slate-800 mt-0.5">
-                        {formatINR(tender.estimated_budget_inr)}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-slate-400 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        EMD Amount
-                      </p>
-                      <p className="font-semibold text-slate-800 mt-0.5">
-                        {tender.msme_emd_exemption ? (
-                          <span className="text-emerald-700 font-medium">Exempt for MSMEs</span>
-                        ) : (
-                          formatINR(tender.emd_amount_inr)
-                        )}
-                      </p>
-                    </div>
-
-                    {Boolean(quantity) && (
-                      <div>
-                        <p className="text-slate-400 flex items-center gap-1">
-                          <Package className="w-3.5 h-3.5" />
-                          Quantity
-                        </p>
-                        <p className="font-semibold text-slate-800 mt-0.5">{String(quantity)}</p>
-                      </div>
-                    )}
-
-                    {pubDate && (
-                      <div>
-                        <p className="text-slate-400 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          Published
-                        </p>
-                        <p className="font-semibold text-slate-800 mt-0.5">
-                          {pubDate.toLocaleDateString()}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="col-span-2 flex items-center justify-between text-slate-600 mt-1 pt-1">
-                      <div className="flex items-center gap-1.5">
-                        <Clock
-                          className={`w-3.5 h-3.5 ${
-                            isClosingSoon ? 'text-amber-500 font-bold' : 'text-slate-400'
-                          }`}
-                        />
-                        <span>
-                          Deadline: {deadline.toLocaleDateString()} at{' '}
-                          {deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          data-testid={`btn-local-pdf-${tender.tender_reference}`}
-                          disabled={downloadingLocalTenderId === tender.id}
-                          onClick={() => handleViewOrDownloadLocalPdf(tender)}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded transition-colors disabled:opacity-50 cursor-pointer"
-                          title="Download and view this tender's PDF locally"
-                        >
-                          <FileText className={`w-3 h-3 text-emerald-600 ${downloadingLocalTenderId === tender.id ? 'animate-spin' : ''}`} />
-                          <span>{downloadingLocalTenderId === tender.id ? 'Opening...' : 'View / Download PDF'}</span>
-                        </button>
-
-                        <a
-                          href={getAllBidsPortalUrl(tender.source_portal, tender.official_portal_url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          data-testid={`link-portal-notice-${tender.tender_reference}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                          title="Open official website of all bids (https://bidplus.gem.gov.in/all-bids)"
-                        >
-                          <span>Portal Notice</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                      {Boolean(tender.ingestion_metadata?.tenderkart_url) && (
-                        <a
-                          href={String(tender.ingestion_metadata?.tenderkart_url)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-800 hover:underline"
-                        >
-                          <span>TenderKart Notice</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                  <Link to={`/tenders/${tender.id}`}>
-                    <Button variant="outline" size="sm">
-                      Notice Details
-                    </Button>
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isDownloading}
-                      isLoading={isDownloading}
-                      onClick={() => handleDownloadTenderPdf(tender)}
-                      icon={<Download className="w-3.5 h-3.5" />}
-                    >
-                      {indexedDocs.length > 0 ? 'Re-download this Tender PDF for Indexing & Evaluating Compliance' : 'Download this Tender PDF for the Indexing for the Evaluating Compliance'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleEvaluateCompliance(tender)}
-                      icon={<FileCheck2 className="w-4 h-4" />}
-                    >
-                      Evaluate Compliance
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {tenders.map((tender) => (
+            <TenderCard
+              key={tender.id}
+              tender={tender}
+              isDownloading={downloadingTenderId === tender.id}
+              isDownloadingLocal={downloadingLocalTenderId === tender.id}
+              onDownloadPdf={handleDownloadTenderPdf}
+              onViewOrDownloadLocalPdf={handleViewOrDownloadLocalPdf}
+              onEvaluateCompliance={handleEvaluateCompliance}
+              getAllBidsPortalUrl={getAllBidsPortalUrl}
+            />
+          ))}
         </div>
       )}
 

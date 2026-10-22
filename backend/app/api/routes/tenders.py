@@ -20,6 +20,7 @@ from app.schemas.tender import (
     TenderCreate,
     TenderDocumentResponse,
     TenderExtractedKnowledgeResponse,
+    TenderImageMetaResponse,
     TenderListResponse,
     TenderProcessingStatusResponse,
     TenderQARequest,
@@ -42,6 +43,7 @@ from app.services.document_retrieval_service import TenderDocumentRetrievalServi
 from app.services.ingestion.ingestion_service import TenderIngestionService
 from app.services.ingestion_scheduler import get_ingestion_scheduler
 from sqlalchemy import select
+from app.services.tender_image_service import get_tender_image_service, TENDER_IMAGES_DIR
 from app.services.tender_service import (
     DocumentNotFoundError,
     TenderNotFoundError,
@@ -361,6 +363,129 @@ async def get_tender_extracted_knowledge(
         total_chunks=len(chunks),
         documents=doc_infos,
         chunks=chunk_infos,
+    )
+
+
+@router.get(
+    "/tenders/{tender_id}/image-meta",
+    response_model=TenderImageMetaResponse,
+    summary="Get resolved image metadata and provenance for a tender",
+)
+async def get_tender_image_meta(
+    tender_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Returns image provenance for the tender:
+    - Prioritizes authentic document-extracted technical photo
+    - Secondary: cached permitted image
+    - Tertiary: curated category technical SVG
+    """
+    tender_service = TenderService(session)
+    try:
+        tender = await tender_service.get_tender(tender_id)
+    except TenderNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    # Check if a downloaded PDF exists for this tender
+    downloaded_pdf = None
+    if tender.documents:
+        for doc in tender.documents:
+            if doc.storage_path and doc.processing_status == "INDEXED":
+                try:
+                    p = tender_service.storage.get_file_path(doc.storage_path)
+                    if p.exists():
+                        downloaded_pdf = str(p)
+                        break
+                except Exception:
+                    pass
+
+    image_service = get_tender_image_service()
+    meta = await image_service.get_tender_image_meta(
+        tender_id=str(tender.id),
+        title=tender.title,
+        sector=tender.sector,
+        downloaded_pdf_path=downloaded_pdf,
+    )
+
+    return TenderImageMetaResponse(
+        tender_id=tender.id,
+        image_url=meta["image_url"],
+        category_key=meta["category_key"],
+        source=meta["source"],
+        query=meta["query"],
+        attribution=meta.get("attribution"),
+        license=meta.get("license"),
+    )
+
+
+@router.get(
+    "/tenders/{tender_id}/image",
+    summary="Serve the cached or document-extracted image for a tender",
+)
+async def get_tender_image(
+    tender_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+):
+    """Serve the local image file for the given tender with persistent cache headers."""
+    # Check if extracted image exists
+    extracted_file = TENDER_IMAGES_DIR / f"{tender_id}_extracted.jpg"
+    if extracted_file.exists():
+        return FileResponse(
+            path=str(extracted_file),
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=604800"},
+        )
+
+    # Resolve tender category and check query cache
+    tender_service = TenderService(session)
+    try:
+        tender = await tender_service.get_tender(tender_id)
+    except TenderNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    image_service = get_tender_image_service()
+    meta = await image_service.get_tender_image_meta(
+        tender_id=str(tender.id),
+        title=tender.title,
+        sector=tender.sector,
+    )
+
+    # If it's a cached file, serve it
+    if meta["source"] in ("DOCUMENT_EXTRACTED", "LOCAL_CACHE"):
+        filename = meta["image_url"].split("/")[-1]
+        file_path = TENDER_IMAGES_DIR / filename
+        if file_path.exists():
+            return FileResponse(
+                path=str(file_path),
+                media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=604800"},
+            )
+
+    # Return category SVG fallback
+    cat_key = meta["category_key"]
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/images/tender-categories/{cat_key}.svg")
+
+
+@router.get(
+    "/tender-images/{filename}",
+    summary="Serve a locally cached tender product image",
+)
+async def get_cached_tender_image(filename: str):
+    """Serve locally cached image file with strict path safety."""
+    safe_name = os.path.basename(filename)
+    file_path = TENDER_IMAGES_DIR / safe_name
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+
+    ext = safe_name.split(".")[-1].lower()
+    media_type = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
+
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=604800"},
     )
 
 
