@@ -10,6 +10,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2.0+-2B5797?logo=diagram&logoColor=white)](https://www.langchain.com/langgraph)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Tests-176_Passed-10B981?logo=checkmarx&logoColor=white)](https://github.com/shivarajsg/TenderBid)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/shivarajsg/TenderBid)
 
 An enterprise-grade, full-stack intelligence and compliance automation platform engineered for Micro, Small, and Medium Enterprises (MSMEs) participating in public procurement. 
 

@@ -67,4 +67,3 @@ services:
           type: web
           name: tenderbid-backend
           property: host
-          path: /api/v1

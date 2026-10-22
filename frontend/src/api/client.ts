@@ -26,7 +26,14 @@ export const tokenStorage = {
   },
 };
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+const rawBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+let baseURL = rawBaseURL.trim();
+if (baseURL && !baseURL.startsWith('http://') && !baseURL.startsWith('https://') && !baseURL.startsWith('/')) {
+  baseURL = `https://${baseURL}`;
+}
+if (baseURL && baseURL.startsWith('http') && !baseURL.includes('/api/v1')) {
+  baseURL = `${baseURL.replace(/\/+$/, '')}/api/v1`;
+}
 
 export const apiClient = axios.create({
   baseURL,
