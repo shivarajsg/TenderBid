@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tender_bid_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tender_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tender_dev_secret_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-tender_platform}
+    ports:
+      # Map host 5433 to container 5432 to avoid collision with standard 5432
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tender_app} -d ${POSTGRES_DB:-tender_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: tender_bid_postgres_data

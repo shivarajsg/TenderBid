@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tender_prod_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tender_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required}
+      POSTGRES_DB: ${POSTGRES_DB:-tender_platform}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tender_app} -d ${POSTGRES_DB:-tender_platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tender_internal
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tender_prod_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: "Tender Intelligence Platform API"
+      APP_ENV: "production"
+      DEBUG: "false"
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-tender_app}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tender_platform}"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT secret key required}
+      JWT_ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      FRONTEND_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:80"
+      UPLOAD_DIR: "/app/uploads"
+      CHROMA_PERSIST_DIRECTORY: "/app/data/chroma"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: "gemini-2.5-flash"
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_chroma:/app/data/chroma
+    networks:
+      - tender_internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tender_prod_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - tender_internal
+
+volumes:
+  postgres_prod_data:
+    name: tender_prod_postgres_data
+  backend_uploads:
+    name: tender_prod_backend_uploads
+  backend_chroma:
+    name: tender_prod_backend_chroma
+
+networks:
+  tender_internal:
+    name: tender_internal_network
+    driver: bridge

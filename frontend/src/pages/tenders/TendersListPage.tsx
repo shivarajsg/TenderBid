@@ -1,0 +1,486 @@
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { tendersApi } from '../../api/tendersApi';
+import { TenderResponse } from '../../types/tender';
+import { Input } from '../../components/common/Input';
+import { Button } from '../../components/common/Button';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { EmptyState } from '../../components/common/EmptyState';
+import { ErrorAlert } from '../../components/common/ErrorAlert';
+import { getErrorMessage } from '../../api/client';
+import {
+  Search,
+  Building,
+  Coins,
+  ShieldCheck,
+  FileCheck2,
+  Clock,
+  ExternalLink,
+  RefreshCw,
+  Globe2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
+
+export const TendersListPage: React.FC = () => {
+  const [tenders, setTenders] = useState<TenderResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [sector, setSector] = useState('');
+  const [selectedPortal, setSelectedPortal] = useState<string>('ALL');
+  const [error, setError] = useState<string | null>(null);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const fetchTenders = async (
+    targetPage = page,
+    limitSize = pageSize,
+    searchQuery = search,
+    sectorFilter = sector,
+    portalFilter = selectedPortal
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await tendersApi.listTenders({
+        page: targetPage,
+        limit: limitSize,
+        search: searchQuery || undefined,
+        sector: sectorFilter || undefined,
+        source_portal: portalFilter !== 'ALL' ? portalFilter : undefined,
+      });
+      setTenders(data.items);
+      setTotal(data.total);
+      if (data.page) {
+        setPage(data.page);
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    setPage(1);
+    fetchTenders(1, pageSize, search, sector, selectedPortal);
+  }, [selectedPortal]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    fetchTenders(1, pageSize, search, sector, selectedPortal);
+  };
+
+  const handleManualRefresh = () => {
+    setRefreshing(true);
+    fetchTenders(page, pageSize, search, sector, selectedPortal);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
+    fetchTenders(newPage, pageSize, search, sector, selectedPortal);
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        // Safe fallback for environments like jsdom without smooth scrolling support
+      }
+    }
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+    fetchTenders(1, newSize, search, sector, selectedPortal);
+  };
+
+  const formatINR = (val?: number | null) => {
+    if (!val) return '₹ Not Disclosed';
+    return `₹ ${Number(val).toLocaleString('en-IN')}`;
+  };
+
+  const renderPortalBadge = (portal?: string | null) => {
+    const p = (portal || 'MANUAL').toUpperCase();
+    if (p === 'GEM') {
+      return (
+        <span
+          data-testid="badge-gem"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          GeM Portal
+        </span>
+      );
+    }
+    if (p === 'CPPP') {
+      return (
+        <span
+          data-testid="badge-cppp"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          CPPP e-Procure
+        </span>
+      );
+    }
+    if (p === 'OPEN_GOV') {
+      return (
+        <span
+          data-testid="badge-opengov"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-800 bg-cyan-50 px-2.5 py-1 rounded-md border border-cyan-200"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+          Open Gov PSU
+        </span>
+      );
+    }
+    if (p === 'TENDERKART') {
+      return (
+        <span
+          data-testid="badge-tenderkart"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-800 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-200"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+          TenderKart Feed
+        </span>
+      );
+    }
+    if (p === 'APIFY') {
+      return (
+        <span
+          data-testid="badge-apify"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          Apify CPPP Feed
+        </span>
+      );
+    }
+    return (
+      <span
+        data-testid="badge-manual"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200"
+      >
+        Direct Notice
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Title and Auto-Ingestion Refresh */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900">Tender Opportunities</h1>
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+              <Globe2 className="w-3 h-3 text-blue-500" />
+              Live Govt Feeds
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 mt-1">
+            Automated government discovery across GeM, CPPP & Open Procurement feeds with deterministic compliance
+          </p>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualRefresh}
+            disabled={loading || refreshing}
+            icon={<RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />}
+          >
+            {refreshing ? 'Syncing...' : 'Refresh Feed'}
+          </Button>
+        </div>
+      </div>
+
+      {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
+
+      {/* Official Procurement Source Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <span className="text-slate-400 font-medium whitespace-nowrap mr-1">Filter Source:</span>
+        {[
+          { id: 'ALL', label: 'All Sources' },
+          { id: 'GEM', label: 'GeM Portal' },
+          { id: 'CPPP', label: 'CPPP e-Procure' },
+          { id: 'OPEN_GOV', label: 'Open Gov PSU' },
+          { id: 'TENDERKART', label: 'TenderKart Feed' },
+          { id: 'APIFY', label: 'Apify Actor Feed' },
+          { id: 'MANUAL', label: 'Direct Notices' },
+        ].map((tab) => {
+          const isActive = selectedPortal === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedPortal(tab.id)}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                isActive
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search & Filter Bar */}
+      <form
+        onSubmit={handleSearchSubmit}
+        className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3"
+      >
+        <div className="flex-1">
+          <Input
+            placeholder="Search by tender reference, title, or authority..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="sm:w-56">
+          <Input
+            placeholder="Filter by sector..."
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+          />
+        </div>
+        <Button type="submit" icon={<Search className="w-4 h-4" />}>
+          Search
+        </Button>
+      </form>
+
+      {/* Results Header */}
+      <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+        <div>
+          Found <span className="font-bold text-slate-800">{total}</span> procurement tenders
+        </div>
+        <div className="text-[11px] text-slate-400">
+          Auto-synchronized with official procurement portals
+        </div>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <LoadingSpinner message="Querying active tender notices..." />
+      ) : tenders.length === 0 ? (
+        <div className="bg-white p-8 rounded-2xl border border-slate-200">
+          <EmptyState
+            title="No tenders found"
+            description="Try modifying your search keywords or switching procurement source filters."
+            actionLabel="Reset Search & Filters"
+            onAction={() => {
+              setSearch('');
+              setSector('');
+              setSelectedPortal('ALL');
+              setPage(1);
+              fetchTenders(1, pageSize, '', '', 'ALL');
+            }}
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {tenders.map((tender) => {
+            const deadline = new Date(tender.submission_deadline);
+            const isClosingSoon =
+              deadline.getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000 &&
+              deadline.getTime() > Date.now();
+
+            return (
+              <div
+                key={tender.id}
+                data-testid={`tender-card-${tender.tender_reference}`}
+                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                        {tender.tender_reference}
+                      </span>
+                      {renderPortalBadge(tender.source_portal)}
+                      {Boolean(tender.ingestion_metadata?.is_fixture) && (
+                        <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          Schema Fixture
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                      {tender.sector}
+                    </span>
+                  </div>
+
+                  <h2 className="text-base font-bold text-slate-900 mt-2 line-clamp-2">
+                    {tender.title}
+                  </h2>
+
+                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                    <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>{tender.issuing_authority}</span>
+                  </p>
+
+                  <div className="mt-5 grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 text-xs">
+                    <div>
+                      <p className="text-slate-400 flex items-center gap-1">
+                        <Coins className="w-3.5 h-3.5" />
+                        Estimated Budget
+                      </p>
+                      <p className="font-semibold text-slate-800 mt-0.5">
+                        {formatINR(tender.estimated_budget_inr)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-slate-400 flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        EMD Amount
+                      </p>
+                      <p className="font-semibold text-slate-800 mt-0.5">
+                        {tender.msme_emd_exemption ? (
+                          <span className="text-emerald-700 font-medium">Exempt for MSMEs</span>
+                        ) : (
+                          formatINR(tender.emd_amount_inr)
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="col-span-2 flex items-center justify-between text-slate-600 mt-1 pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <Clock
+                          className={`w-3.5 h-3.5 ${
+                            isClosingSoon ? 'text-amber-500 font-bold' : 'text-slate-400'
+                          }`}
+                        />
+                        <span>
+                          Deadline: {deadline.toLocaleDateString()} at{' '}
+                          {deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      {tender.official_portal_url && (
+                        <a
+                          href={tender.official_portal_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          <span>Portal Notice</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {Boolean(tender.ingestion_metadata?.tenderkart_url) && (
+                        <a
+                          href={String(tender.ingestion_metadata?.tenderkart_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-800 hover:underline"
+                        >
+                          <span>TenderKart Notice</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <Link to={`/tenders/${tender.id}`}>
+                    <Button variant="outline" size="sm">
+                      Notice Details
+                    </Button>
+                  </Link>
+                  <Link to={`/compliance/analyze?tender_id=${tender.id}`}>
+                    <Button size="sm" icon={<FileCheck2 className="w-4 h-4" />}>
+                      Evaluate Compliance
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Responsive Pagination Controls */}
+      {!loading && total > 0 && (
+        <div
+          data-testid="pagination-controls"
+          className="bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+            <span>
+              Showing <strong className="font-semibold text-slate-800">{Math.min((page - 1) * pageSize + 1, total)}</strong> to{' '}
+              <strong className="font-semibold text-slate-800">{Math.min(page * pageSize, total)}</strong> of{' '}
+              <strong className="font-semibold text-slate-800">{total}</strong> tenders
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+              <span className="text-slate-500">Per page:</span>
+              <select
+                data-testid="select-page-size"
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-md px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={48}>48</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              data-testid="btn-first-page"
+              onClick={() => handlePageChange(1)}
+              disabled={page <= 1}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="First Page"
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+            <button
+              data-testid="btn-prev-page"
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Previous</span>
+            </button>
+
+            <span data-testid="page-indicator" className="text-xs font-semibold text-slate-700 px-3 py-1 bg-slate-50 rounded-md border border-slate-200">
+              Page {page} of {totalPages}
+            </span>
+
+            <button
+              data-testid="btn-next-page"
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              data-testid="btn-last-page"
+              onClick={() => handlePageChange(totalPages)}
+              disabled={page >= totalPages}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title="Last Page"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
