@@ -6,9 +6,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.common import ResponseEnvelope
 from app.schemas.company import (
-    CapabilityStatementResponse,
     CompanyCreateRequest,
-    CompanyReadinessResponse,
     CompanyResponse,
     CompanyUpdateRequest,
 )
@@ -98,53 +96,5 @@ async def update_my_company_profile(
     except CompanyConflictError as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=str(e),
-        )
-
-
-@router.get(
-    "/readiness",
-    response_model=ResponseEnvelope[CompanyReadinessResponse],
-    status_code=status.HTTP_200_OK,
-)
-async def get_my_company_readiness(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """Calculate objective data-driven bid readiness score with gap analysis."""
-    service = CompanyService(session)
-    try:
-        readiness = await service.get_readiness_score(current_user)
-        return ResponseEnvelope(
-            success=True,
-            data=readiness,
-        )
-    except CompanyNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        )
-
-
-@router.get(
-    "/capability-statement",
-    response_model=ResponseEnvelope[CapabilityStatementResponse],
-    status_code=status.HTTP_200_OK,
-)
-async def get_my_company_capability_statement(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-):
-    """Generate structured capability statement data suitable for tender bid submission."""
-    service = CompanyService(session)
-    try:
-        statement = await service.get_capability_statement(current_user)
-        return ResponseEnvelope(
-            success=True,
-            data=statement,
-        )
-    except CompanyNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )

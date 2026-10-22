@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List
 from sqlalchemy import Date, DateTime, ForeignKey, JSON, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,10 +32,6 @@ class Company(Base):
         String(255),
         nullable=False,
     )
-    trade_name: Mapped[Optional[str]] = mapped_column(
-        String(255),
-        nullable=True,
-    )
     registration_number: Mapped[str] = mapped_column(
         String(100),
         unique=True,
@@ -55,57 +51,6 @@ class Company(Base):
     incorporation_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
-    )
-    constitution: Mapped[Optional[str]] = mapped_column(
-        String(50),
-        nullable=True,
-        default="PRIVATE_LIMITED",  # PRIVATE_LIMITED, PROPRIETORSHIP, PARTNERSHIP, LLP, PUBLIC_LIMITED
-    )
-    pan_number: Mapped[Optional[str]] = mapped_column(
-        String(10),
-        nullable=True,
-    )
-    gstin: Mapped[Optional[str]] = mapped_column(
-        String(15),
-        nullable=True,
-    )
-    udyam_number: Mapped[Optional[str]] = mapped_column(
-        String(50),
-        nullable=True,
-    )
-    dpiit_recognition_number: Mapped[Optional[str]] = mapped_column(
-        String(50),
-        nullable=True,
-    )
-    address: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON,
-        nullable=True,
-        default=dict,
-    )
-    contact_details: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON,
-        nullable=True,
-        default=dict,
-    )
-    technical_capabilities: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON,
-        nullable=True,
-        default=dict,
-    )
-    workforce_metrics: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON,
-        nullable=True,
-        default=dict,
-    )
-    tender_exemptions: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON,
-        nullable=True,
-        default=dict,
-    )
-    declarations: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON,
-        nullable=True,
-        default=dict,
     )
     annual_turnover: Mapped[List[Dict[str, Any]]] = mapped_column(
         JSON,
