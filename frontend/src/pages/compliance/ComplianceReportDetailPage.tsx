@@ -681,11 +681,11 @@ export const ComplianceReportDetailPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Right: AI Intelligence Explanation */}
+                        {/* Right: Explanation & Steps to be Taken */}
                         <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-200 space-y-2">
                           <p className="font-bold text-indigo-900 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                            Gemini Intelligence Explanation
+                            Explanation & Steps to be Taken
                           </p>
                           <p className="text-indigo-950 leading-relaxed">
                             {finding.ai_explanation || finding.reason}
