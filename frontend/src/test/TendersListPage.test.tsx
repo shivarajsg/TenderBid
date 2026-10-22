@@ -142,6 +142,7 @@ describe('TendersListPage Component', () => {
       expect(screen.getByTestId('badge-tenderkart')).toBeInTheDocument();
       const portalLinks = screen.getAllByText('Portal Notice');
       expect(portalLinks.length).toBe(3);
+      expect(portalLinks[0].closest('a')).toHaveAttribute('href', 'https://bidplus.gem.gov.in/all-bids');
     });
   });
 
@@ -349,11 +350,12 @@ describe('TendersListPage Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Download Tender PDF')).toBeInTheDocument();
+      expect(screen.getByText('Download this Tender PDF for the Indexing for the Evaluating Compliance')).toBeInTheDocument();
       expect(screen.getByText('Not Downloaded')).toBeInTheDocument();
+      expect(screen.getByText('View / Download PDF')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Download Tender PDF'));
+    fireEvent.click(screen.getByText('Download this Tender PDF for the Indexing for the Evaluating Compliance'));
 
     await waitFor(() => {
       expect(tendersApi.fetchTenderDocuments).toHaveBeenCalledWith('tender-download-1');
@@ -481,6 +483,75 @@ describe('TendersListPage Component', () => {
       expect(screen.getByTestId('metric-gem-skipped')).toHaveTextContent('35');
       expect(screen.getByTestId('metric-gem-unretrieved')).toHaveTextContent('0 (None)');
       expect(screen.getByTestId('badge-crawl-status')).toHaveTextContent('Bounded Batch (Partial Crawl)');
+    });
+  });
+it('downloads and opens local PDF when small View / Download PDF button beside Portal Notice is clicked', async () => {
+    const mockWindowOpen = vi.fn();
+    vi.stubGlobal('open', mockWindowOpen);
+
+    vi.mocked(tendersApi.listTenders).mockResolvedValue({
+      items: [
+        {
+          id: 'tender-local-view-1',
+          tender_reference: 'GEM/2026/B/888999',
+          title: 'Laboratory Diagnostic Ultrasound',
+          issuing_authority: 'AIIMS',
+          sector: 'Healthcare',
+          msme_emd_exemption: true,
+          submission_deadline: '2026-12-31T23:59:59Z',
+          processing_status: 'INDEXED',
+          source_portal: 'GEM',
+          documents: [
+            {
+              id: 'doc-local-1',
+              tender_id: 'tender-local-view-1',
+              original_filename: 'Ultrasound_Spec.pdf',
+              document_category: 'TENDER_NOTICE',
+              file_size_bytes: 50000,
+              mime_type: 'application/pdf',
+              sha256_hash: 'hash-local-1234',
+              processing_status: 'INDEXED',
+              total_pages: 5,
+              indexed_chunks: 12,
+              created_at: '2026-01-01T00:00:00Z',
+            },
+          ],
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+      skip: 0,
+      limit: 12,
+    });
+
+    vi.mocked(tendersApi.downloadDocument).mockResolvedValue();
+    vi.mocked(tendersApi.viewDocumentBlob).mockResolvedValue('blob:http://localhost/mock-ultrasound-blob');
+
+    render(
+      <MemoryRouter>
+        <TendersListPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-local-pdf-GEM/2026/B/888999')).toBeInTheDocument();
+      expect(screen.getByTestId('link-portal-notice-GEM/2026/B/888999')).toHaveAttribute(
+        'href',
+        'https://bidplus.gem.gov.in/all-bids'
+      );
+    });
+
+    fireEvent.click(screen.getByTestId('btn-local-pdf-GEM/2026/B/888999'));
+
+    await waitFor(() => {
+      expect(tendersApi.downloadDocument).toHaveBeenCalledWith(
+        'tender-local-view-1',
+        'doc-local-1',
+        'Ultrasound_Spec.pdf'
+      );
+      expect(tendersApi.viewDocumentBlob).toHaveBeenCalledWith('tender-local-view-1', 'doc-local-1');
+      expect(mockWindowOpen).toHaveBeenCalledWith('blob:http://localhost/mock-ultrasound-blob', '_blank');
     });
   });
 });

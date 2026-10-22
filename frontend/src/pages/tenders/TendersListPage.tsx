@@ -29,6 +29,7 @@ import {
   AlertCircle,
   Package,
   Calendar,
+  Eye,
 } from 'lucide-react';
 
 interface GemCrawlMetadata {
@@ -46,6 +47,15 @@ interface GemCrawlMetadata {
   last_retrieved_at?: string;
 }
 
+const getAllBidsPortalUrl = (sourcePortal?: string | null, fallbackUrl?: string | null) => {
+  const p = (sourcePortal || '').toUpperCase();
+  if (p === 'GEM') return 'https://bidplus.gem.gov.in/all-bids';
+  if (p === 'CPPP') return 'https://eprocure.gov.in/eprocure/app';
+  if (p === 'OPEN_GOV') return 'https://data.gov.in';
+  if (p === 'TENDERKART') return 'https://tenderkart.in';
+  return 'https://bidplus.gem.gov.in/all-bids';
+};
+
 export const TendersListPage: React.FC = () => {
   const navigate = useNavigate();
   const [tenders, setTenders] = useState<TenderResponse[]>([]);
@@ -55,6 +65,37 @@ export const TendersListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [downloadingTenderId, setDownloadingTenderId] = useState<string | null>(null);
+const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string | null>(null);
+
+  const handleViewOrDownloadLocalPdf = async (tender: TenderResponse) => {
+    setDownloadingLocalTenderId(tender.id);
+    setError(null);
+    try {
+      let currentTender = tender;
+      let docs = currentTender.documents || [];
+      if (docs.length === 0) {
+        await tendersApi.fetchTenderDocuments(tender.id);
+        currentTender = await tendersApi.getTender(tender.id);
+        setTenders((prev) =>
+          prev.map((t) => (t.id === tender.id ? currentTender : t))
+        );
+        docs = currentTender.documents || [];
+      }
+
+      if (docs.length > 0) {
+        const doc = docs[0];
+        await tendersApi.downloadDocument(currentTender.id, doc.id, doc.original_filename);
+        const blobUrl = await tendersApi.viewDocumentBlob(currentTender.id, doc.id);
+        window.open(blobUrl, '_blank');
+      } else {
+        setError(`No local PDF document could be retrieved for [${tender.tender_reference}].`);
+      }
+    } catch (err: unknown) {
+      setError(`Failed to retrieve or view local PDF: ${getErrorMessage(err)}`);
+    } finally {
+      setDownloadingLocalTenderId(null);
+    }
+  };
   const [unindexedModalTender, setUnindexedModalTender] = useState<TenderResponse | null>(null);
   const [search, setSearch] = useState('');
   const [sector, setSector] = useState('');
@@ -634,17 +675,31 @@ export const TendersListPage: React.FC = () => {
                           {deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      {tender.official_portal_url && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          data-testid={`btn-local-pdf-${tender.tender_reference}`}
+                          disabled={downloadingLocalTenderId === tender.id}
+                          onClick={() => handleViewOrDownloadLocalPdf(tender)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                          title="Download and view this tender's PDF locally"
+                        >
+                          <FileText className={`w-3 h-3 text-emerald-600 ${downloadingLocalTenderId === tender.id ? 'animate-spin' : ''}`} />
+                          <span>{downloadingLocalTenderId === tender.id ? 'Opening...' : 'View / Download PDF'}</span>
+                        </button>
+
                         <a
-                          href={tender.official_portal_url}
+                          href={getAllBidsPortalUrl(tender.source_portal, tender.official_portal_url)}
                           target="_blank"
                           rel="noopener noreferrer"
+                          data-testid={`link-portal-notice-${tender.tender_reference}`}
                           className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                          title="Open official website of all bids (https://bidplus.gem.gov.in/all-bids)"
                         >
                           <span>Portal Notice</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
-                      )}
+                      </div>
                       {Boolean(tender.ingestion_metadata?.tenderkart_url) && (
                         <a
                           href={String(tender.ingestion_metadata?.tenderkart_url)}
@@ -675,7 +730,7 @@ export const TendersListPage: React.FC = () => {
                       onClick={() => handleDownloadTenderPdf(tender)}
                       icon={<Download className="w-3.5 h-3.5" />}
                     >
-                      {indexedDocs.length > 0 ? 'Re-download PDF' : 'Download Tender PDF'}
+                      {indexedDocs.length > 0 ? 'Re-download this Tender PDF for Indexing & Evaluating Compliance' : 'Download this Tender PDF for the Indexing for the Evaluating Compliance'}
                     </Button>
                     <Button
                       size="sm"
