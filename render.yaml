@@ -3,18 +3,16 @@ databases:
     databaseName: tender_platform
     user: tender_user
     plan: free
-    region: oregon
 
 services:
   # FastAPI Backend Service
   - type: web
     name: tenderbid-backend
     runtime: python
-    region: oregon
     plan: free
     rootDir: backend
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -m alembic upgrade head
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
       - key: APP_NAME
@@ -52,6 +50,7 @@ services:
   - type: web
     name: tenderbid-frontend
     runtime: static
+    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
