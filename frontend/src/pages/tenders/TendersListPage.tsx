@@ -62,7 +62,7 @@ export const TendersListPage: React.FC = () => {
   const [tenders, setTenders] = useState<TenderResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [downloadingTenderId, setDownloadingTenderId] = useState<string | null>(null);
@@ -832,9 +832,11 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                 className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-md px-2 py-1 focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium cursor-pointer"
               >
-                <option value={12}>12</option>
-                <option value={24}>24</option>
-                <option value={48}>48</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+                <option value={500}>500</option>
               </select>
             </div>
           </div>

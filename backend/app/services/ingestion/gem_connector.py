@@ -352,7 +352,7 @@ class GeMTenderConnector(BaseTenderConnector):
                         "byType": "all",
                         "highBidValue": "",
                         "byEndDate": {},
-                        "sort": "Bid-End-Date-Oldest",
+                        "sort": "Bid-Start-Date-Latest",
                     },
                 }
 

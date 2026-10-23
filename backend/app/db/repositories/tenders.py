@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
-from sqlalchemy import func, select, or_
+from sqlalchemy import func, select, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -118,8 +118,14 @@ class TenderRepository:
         total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
-        # Sort by submission_deadline ascending
-        query = query.order_by(Tender.submission_deadline.asc()).offset(skip).limit(limit)
+        # Prioritize active/upcoming tenders first (closing soonest), followed by closed tenders
+        now = datetime.now(timezone.utc)
+        query = query.order_by(
+            case((Tender.submission_deadline >= now, 0), else_=1),
+            Tender.submission_deadline.asc(),
+            Tender.publication_date.desc().nullslast(),
+            Tender.created_at.desc(),
+        ).offset(skip).limit(limit)
         result = await self.session.execute(query)
         items = list(result.scalars().all())
 

@@ -66,7 +66,7 @@ router = APIRouter(tags=["Tenders"])
 async def list_tenders(
     page: Optional[int] = Query(None, ge=1, description="1-based page number (alternative to skip)"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     sector: Optional[str] = Query(None, description="Filter by domain sector"),
     min_budget: Optional[Decimal] = Query(None, ge=0, description="Minimum estimated budget (INR)"),
     max_budget: Optional[Decimal] = Query(None, ge=0, description="Maximum estimated budget (INR)"),

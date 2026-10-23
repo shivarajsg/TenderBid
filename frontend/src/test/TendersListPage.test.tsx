@@ -166,9 +166,9 @@ describe('TendersListPage Component', () => {
       ],
       total: 73,
       skip: 0,
-      limit: 12,
+      limit: 20,
       page: 1,
-      pages: 7,
+      pages: 4,
     });
 
     render(
@@ -179,7 +179,7 @@ describe('TendersListPage Component', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('pagination-controls')).toBeInTheDocument();
-      expect(screen.getByTestId('page-indicator')).toHaveTextContent('Page 1 of 7');
+      expect(screen.getByTestId('page-indicator')).toHaveTextContent('Page 1 of 4');
       expect(screen.getByTestId('btn-prev-page')).toBeDisabled();
       expect(screen.getByTestId('btn-next-page')).not.toBeDisabled();
       expect(screen.getByText('PAGE/1/T1')).toBeInTheDocument();
@@ -204,10 +204,10 @@ describe('TendersListPage Component', () => {
         },
       ],
       total: 73,
-      skip: 12,
-      limit: 12,
+      skip: 20,
+      limit: 20,
       page: 2,
-      pages: 7,
+      pages: 4,
     });
 
     const nextBtn = screen.getByTestId('btn-next-page');
@@ -217,11 +217,11 @@ describe('TendersListPage Component', () => {
       expect(tendersApi.listTenders).toHaveBeenCalledWith(
         expect.objectContaining({
           page: 2,
-          limit: 12,
+          limit: 20,
         })
       );
       expect(screen.getByText('PAGE/2/T1')).toBeInTheDocument();
-      expect(screen.getByTestId('page-indicator')).toHaveTextContent('Page 2 of 7');
+      expect(screen.getByTestId('page-indicator')).toHaveTextContent('Page 2 of 4');
       expect(screen.getByTestId('btn-prev-page')).not.toBeDisabled();
     });
   });
@@ -245,7 +245,7 @@ describe('TendersListPage Component', () => {
       ],
       total: 1,
       skip: 0,
-      limit: 12,
+      limit: 20,
     });
 
     vi.mocked(tendersApi.refreshTenders).mockResolvedValue({
@@ -297,7 +297,7 @@ describe('TendersListPage Component', () => {
       items: [tenderObj],
       total: 1,
       skip: 0,
-      limit: 12,
+      limit: 20,
     });
 
     vi.mocked(tendersApi.fetchTenderDocuments).mockResolvedValue({
@@ -382,7 +382,7 @@ describe('TendersListPage Component', () => {
       ],
       total: 1,
       skip: 0,
-      limit: 12,
+      limit: 20,
     });
 
     render(
@@ -428,7 +428,7 @@ describe('TendersListPage Component', () => {
       ],
       total: 1,
       skip: 0,
-      limit: 12,
+      limit: 20,
     });
 
     vi.mocked(tendersApi.refreshTenders).mockResolvedValue({
@@ -522,7 +522,7 @@ it('downloads and opens local PDF when small View / Download PDF button beside P
       ],
       total: 1,
       skip: 0,
-      limit: 12,
+      limit: 20,
     });
 
     vi.mocked(tendersApi.downloadDocument).mockResolvedValue();
