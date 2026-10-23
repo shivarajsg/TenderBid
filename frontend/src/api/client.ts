@@ -28,6 +28,12 @@ export const tokenStorage = {
 
 const rawBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
 let baseURL = rawBaseURL.trim();
+
+// If Render only injected the internal service name (e.g. "tenderbid-backend") without domain
+if (baseURL && !baseURL.includes('.') && !baseURL.includes('localhost') && !baseURL.startsWith('/')) {
+  baseURL = `${baseURL}.onrender.com`;
+}
+
 if (baseURL && !baseURL.startsWith('http://') && !baseURL.startsWith('https://') && !baseURL.startsWith('/')) {
   baseURL = `https://${baseURL}`;
 }
