@@ -19,6 +19,7 @@ export interface TenderFilterParams {
   min_budget?: number;
   max_budget?: number;
   source_portal?: string;
+  active_only?: boolean;
 }
 
 export const tendersApi = {

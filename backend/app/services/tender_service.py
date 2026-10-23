@@ -77,6 +77,7 @@ class TenderService:
         deadline_after: Optional[datetime] = None,
         search: Optional[str] = None,
         source_portal: Optional[str] = None,
+        active_only: bool = True,
     ) -> Tuple[List[Tender], int]:
         """List tenders with query filters."""
         return await self.repository.list(
@@ -88,6 +89,7 @@ class TenderService:
             deadline_after=deadline_after,
             search=search,
             source_portal=source_portal,
+            active_only=active_only,
         )
 
     async def update_tender(self, tender_id: uuid.UUID, tender_in: TenderUpdate) -> Tender:

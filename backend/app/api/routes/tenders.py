@@ -73,6 +73,7 @@ async def list_tenders(
     deadline_after: Optional[datetime] = Query(None, description="Tenders closing after UTC datetime"),
     search: Optional[str] = Query(None, description="Text search in title, reference, or authority"),
     source_portal: Optional[str] = Query(None, description="Filter by official source portal: GEM, CPPP, OPEN_GOV, TENDERKART, APIFY, MANUAL"),
+    active_only: bool = Query(True, description="Filter for active ongoing tenders whose deadline has not expired"),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ):
@@ -90,6 +91,7 @@ async def list_tenders(
         deadline_after=deadline_after,
         search=search,
         source_portal=source_portal,
+        active_only=active_only,
     )
 
     # Compute 1-based page number and total pages

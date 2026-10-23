@@ -101,6 +101,7 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
   const [search, setSearch] = useState('');
   const [sector, setSector] = useState('');
   const [selectedPortal, setSelectedPortal] = useState<string>('ALL');
+  const [activeOnly, setActiveOnly] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [gemMetrics, setGemMetrics] = useState<GemCrawlMetadata | null>(null);
@@ -117,7 +118,8 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
     limitSize = pageSize,
     searchQuery = search,
     sectorFilter = sector,
-    portalFilter = selectedPortal
+    portalFilter = selectedPortal,
+    onlyActive = activeOnly
   ) => {
     setLoading(true);
     setError(null);
@@ -128,6 +130,7 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
         search: searchQuery || undefined,
         sector: sectorFilter || undefined,
         source_portal: portalFilter !== 'ALL' ? portalFilter : undefined,
+        active_only: onlyActive,
       });
       setTenders(data.items);
       setTotal(data.total);
@@ -144,13 +147,19 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
 
   useEffect(() => {
     setPage(1);
-    fetchTenders(1, pageSize, search, sector, selectedPortal);
-  }, [selectedPortal]);
+    fetchTenders(1, pageSize, search, sector, selectedPortal, activeOnly);
+  }, [selectedPortal, activeOnly]);
+
+  const handleToggleActiveOnly = (val: boolean) => {
+    setActiveOnly(val);
+    setPage(1);
+    fetchTenders(1, pageSize, search, sector, selectedPortal, val);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    fetchTenders(1, pageSize, search, sector, selectedPortal);
+    fetchTenders(1, pageSize, search, sector, selectedPortal, activeOnly);
   };
 
   const handleRefreshTenderList = async () => {
@@ -190,10 +199,10 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
         );
       }
       setPage(1);
-      await fetchTenders(1, pageSize, search, sector, selectedPortal);
+      await fetchTenders(1, pageSize, search, sector, selectedPortal, activeOnly);
     } catch (err: unknown) {
       setError(`Failed to sync live tender feeds: ${getErrorMessage(err)}`);
-      await fetchTenders(page, pageSize, search, sector, selectedPortal);
+      await fetchTenders(page, pageSize, search, sector, selectedPortal, activeOnly);
     } finally {
       setRefreshing(false);
     }
@@ -247,7 +256,7 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
-    fetchTenders(newPage, pageSize, search, sector, selectedPortal);
+    fetchTenders(newPage, pageSize, search, sector, selectedPortal, activeOnly);
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       try {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -260,7 +269,7 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setPage(1);
-    fetchTenders(1, newSize, search, sector, selectedPortal);
+    fetchTenders(1, newSize, search, sector, selectedPortal, activeOnly);
   };
 
   const formatINR = (val?: number | null) => {
@@ -383,33 +392,66 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
-        {/* Official Procurement Source Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs scrollbar-thin">
-          <span className="text-slate-400 font-medium whitespace-nowrap text-xs mr-1">Filter Source:</span>
-          {[
-            { id: 'ALL', label: 'All Sources' },
-            { id: 'GEM', label: 'GeM Portal' },
-            { id: 'CPPP', label: 'CPPP e-Procure' },
-            { id: 'OPEN_GOV', label: 'Open Gov PSU' },
-            { id: 'TENDERKART', label: 'TenderKart Feed' },
-            { id: 'APIFY', label: 'Apify Actor Feed' },
-            { id: 'MANUAL', label: 'Direct Notices' },
-          ].map((tab) => {
-            const isActive = selectedPortal === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedPortal(tab.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-2xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100/80'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+        {/* Official Procurement Source Filter Tabs & Active/Closed Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-0.5 text-xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+            <span className="text-slate-400 font-medium whitespace-nowrap text-xs mr-1">Filter Source:</span>
+            {[
+              { id: 'ALL', label: 'All Sources' },
+              { id: 'GEM', label: 'GeM Portal' },
+              { id: 'CPPP', label: 'CPPP e-Procure' },
+              { id: 'OPEN_GOV', label: 'Open Gov PSU' },
+              { id: 'TENDERKART', label: 'TenderKart Feed' },
+              { id: 'APIFY', label: 'Apify Actor Feed' },
+              { id: 'MANUAL', label: 'Direct Notices' },
+            ].map((tab) => {
+              const isActive = selectedPortal === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setSelectedPortal(tab.id)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100/80'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active / Ongoing vs Closed Toggle */}
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs shrink-0">
+            <button
+              type="button"
+              data-testid="toggle-ongoing-bids"
+              onClick={() => handleToggleActiveOnly(true)}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer ${
+                activeOnly
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Show active ongoing tenders closing in the future"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${activeOnly ? 'bg-white animate-pulse' : 'bg-emerald-500'}`} />
+              Ongoing Active Bids
+            </button>
+            <button
+              type="button"
+              data-testid="toggle-all-bids"
+              onClick={() => handleToggleActiveOnly(false)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                !activeOnly
+                  ? 'bg-slate-800 text-white shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Include past closed tenders"
+            >
+              Include Closed
+            </button>
+          </div>
         </div>
 
         {/* GeM Live Crawl Transparency Panel */}
@@ -545,8 +587,9 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
               setSearch('');
               setSector('');
               setSelectedPortal('ALL');
+              setActiveOnly(true);
               setPage(1);
-              fetchTenders(1, pageSize, '', '', 'ALL');
+              fetchTenders(1, pageSize, '', '', 'ALL', true);
             }}
           />
         </div>

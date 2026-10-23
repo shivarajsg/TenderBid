@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import func, select, or_, case
@@ -8,6 +8,23 @@ from sqlalchemy.orm import selectinload
 
 from app.models.tender import Tender
 from app.schemas.tender import TenderCreate, TenderUpdate
+
+
+def get_procurement_clock_now() -> datetime:
+    """Return the current Indian Standard Time (IST) procurement clock.
+    Official Indian procurement portals (GeM, CPPP) operate in IST (UTC+5:30)
+    and format their bid submission deadlines in Indian Standard Time.
+    """
+    now_ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+    return datetime(
+        now_ist.year,
+        now_ist.month,
+        now_ist.day,
+        now_ist.hour,
+        now_ist.minute,
+        now_ist.second,
+        tzinfo=timezone.utc,
+    )
 
 
 class TenderRepository:
@@ -84,10 +101,13 @@ class TenderRepository:
         deadline_after: Optional[datetime] = None,
         search: Optional[str] = None,
         source_portal: Optional[str] = None,
+        active_only: bool = True,
     ) -> Tuple[List[Tender], int]:
         """List tenders with optional filtering, search, and pagination."""
         query = select(Tender).options(selectinload(Tender.documents))
         count_query = select(func.count()).select_from(Tender)
+
+        procurement_now = get_procurement_clock_now()
 
         filters = []
         if source_portal:
@@ -98,7 +118,10 @@ class TenderRepository:
             filters.append(Tender.estimated_budget_inr >= min_budget)
         if max_budget is not None:
             filters.append(Tender.estimated_budget_inr <= max_budget)
-        if deadline_after is not None:
+        if active_only:
+            effective_deadline = deadline_after if deadline_after is not None else procurement_now
+            filters.append(Tender.submission_deadline >= effective_deadline)
+        elif deadline_after is not None:
             filters.append(Tender.submission_deadline >= deadline_after)
         if search:
             search_pattern = f"%{search}%"
@@ -119,9 +142,8 @@ class TenderRepository:
         total = total_result.scalar_one()
 
         # Prioritize active/upcoming tenders first (closing soonest), followed by closed tenders
-        now = datetime.now(timezone.utc)
         query = query.order_by(
-            case((Tender.submission_deadline >= now, 0), else_=1),
+            case((Tender.submission_deadline >= procurement_now, 0), else_=1),
             Tender.submission_deadline.asc(),
             Tender.publication_date.desc().nullslast(),
             Tender.created_at.desc(),
