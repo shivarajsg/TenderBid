@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorAlert } from '../../components/common/ErrorAlert';
 import { TenderQAPanel } from '../../components/tenders/TenderQAPanel';
 import { getErrorMessage } from '../../api/client';
+import { formatTenderDate, formatTenderDeadline } from '../../utils/dateUtils';
 import {
   FileText,
   Download,
@@ -314,7 +315,7 @@ export const TenderDetailPage: React.FC = () => {
             </p>
             <p className="font-bold text-slate-900 mt-0.5">
               {tender.publication_date
-                ? new Date(tender.publication_date).toLocaleDateString()
+                ? formatTenderDate(tender.publication_date)
                 : 'Not specified'}
             </p>
           </div>
@@ -324,7 +325,7 @@ export const TenderDetailPage: React.FC = () => {
               <Calendar className="w-3.5 h-3.5" /> Closing Deadline
             </p>
             <p className="font-bold text-slate-900 mt-0.5">
-              {new Date(tender.submission_deadline).toLocaleDateString()}
+              {formatTenderDeadline(tender.submission_deadline)}
             </p>
           </div>
         </div>

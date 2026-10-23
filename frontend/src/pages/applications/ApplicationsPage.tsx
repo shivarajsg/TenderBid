@@ -6,6 +6,7 @@ import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorAlert } from '../../components/common/ErrorAlert';
 import { getErrorMessage } from '../../api/client';
+import { formatTenderDeadline } from '../../utils/dateUtils';
 import {
   FolderKanban,
   FileText,
@@ -220,9 +221,7 @@ export const ApplicationsPage: React.FC = () => {
                         <Calendar className="w-3.5 h-3.5 text-slate-400" /> Deadline:
                       </span>
                       <strong className="text-slate-800">
-                        {app.submission_deadline
-                          ? new Date(app.submission_deadline).toLocaleDateString()
-                          : 'Not set'}
+                        {formatTenderDeadline(app.submission_deadline)}
                       </strong>
                     </div>
 

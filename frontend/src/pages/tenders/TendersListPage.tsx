@@ -8,6 +8,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorAlert } from '../../components/common/ErrorAlert';
 import { getErrorMessage } from '../../api/client';
+import { formatTenderDate, formatTenderDeadline } from '../../utils/dateUtils';
 import {
   Search,
   Building,
@@ -661,7 +662,7 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
                           Published
                         </p>
                         <p className="font-semibold text-slate-800 mt-0.5">
-                          {pubDate.toLocaleDateString()}
+                          {formatTenderDate(tender.publication_date)}
                         </p>
                       </div>
                     )}
@@ -674,8 +675,7 @@ const [downloadingLocalTenderId, setDownloadingLocalTenderId] = useState<string 
                           }`}
                         />
                         <span>
-                          Deadline: {deadline.toLocaleDateString()} at{' '}
-                          {deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          Deadline: {formatTenderDeadline(tender.submission_deadline)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

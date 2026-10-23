@@ -260,6 +260,32 @@ class GeMTenderConnector(BaseTenderConnector):
             logger.error("[GeM Connector] Live GeM fetch failed: %s", exc)
             raise
 
+    @staticmethod
+    def _parse_portal_datetime(raw_str: str, default: datetime) -> datetime:
+        """Parse GeM portal datetime strings preserving UTC precision."""
+        if not raw_str or raw_str.startswith("-"):
+            return default
+        raw = raw_str.strip()
+        try:
+            clean = raw.replace("Z", "+00:00")
+            parsed = datetime.fromisoformat(clean)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            if parsed.year >= 2024:
+                return parsed
+        except Exception:
+            pass
+
+        for fmt in ("%d-%m-%Y %H:%M:%S", "%d-%m-%Y %H:%M", "%d-%m-%Y", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
+            try:
+                parsed = datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
+                if parsed.year >= 2024:
+                    return parsed
+            except Exception:
+                pass
+
+        return default
+
     async def _fetch_live_gem_bids(
         self,
         limit: int = 50,
@@ -417,26 +443,12 @@ class GeMTenderConnector(BaseTenderConnector):
                     official_doc_url = f"https://bidplus.gem.gov.in/{doc_path}/{b_id}"
 
                     # Parse submission deadline
-                    deadline = now + timedelta(days=14)
-                    if end_str and not end_str.startswith("-"):
-                        try:
-                            clean_end = end_str.replace("Z", "+00:00")
-                            parsed_dl = datetime.fromisoformat(clean_end)
-                            if parsed_dl.year >= 2024:
-                                deadline = parsed_dl
-                        except Exception:
-                            pass
+                    default_deadline = now + timedelta(days=14)
+                    deadline = self._parse_portal_datetime(end_str, default_deadline)
 
                     # Parse publication date
-                    pub_date = now - timedelta(days=1)
-                    if start_str and not start_str.startswith("-"):
-                        try:
-                            clean_start = start_str.replace("Z", "+00:00")
-                            parsed_pub = datetime.fromisoformat(clean_start)
-                            if parsed_pub.year >= 2024:
-                                pub_date = parsed_pub
-                        except Exception:
-                            pass
+                    default_pub = now - timedelta(days=1)
+                    pub_date = self._parse_portal_datetime(start_str, default_pub)
 
                     authority = f"{min_name} - {dept_name}".strip(" -") or "Government e-Marketplace (GeM)"
                     title = category or f"Procurement Notice: {b_bid_number}"

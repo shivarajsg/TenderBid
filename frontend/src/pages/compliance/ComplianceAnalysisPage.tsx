@@ -9,6 +9,7 @@ import { Button } from '../../components/common/Button';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { ErrorAlert } from '../../components/common/ErrorAlert';
 import { getErrorMessage } from '../../api/client';
+import { formatTenderDeadline } from '../../utils/dateUtils';
 import {
   FileCheck2,
   Sparkles,
@@ -228,7 +229,7 @@ export const ComplianceAnalysisPage: React.FC = () => {
               </div>
               <p className="text-slate-600">
                 Deadline:{' '}
-                {new Date(selectedTender.submission_deadline).toLocaleDateString()}
+                {formatTenderDeadline(selectedTender.submission_deadline)}
               </p>
               <p className="text-slate-500">
                 Attached Documents: {indexedDocsCount} files indexed ({attachedDocs.length} total attached)
